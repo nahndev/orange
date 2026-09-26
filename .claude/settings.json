@@ -1,0 +1,73 @@
+{
+  "includeCoAuthoredBy": true,
+  "env": {
+    "INSIDE_CLAUDE_CODE": "1",
+    "BASH_DEFAULT_TIMEOUT_MS": "420000",
+    "BASH_MAX_TIMEOUT_MS": "420000"
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/skill-eval.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "# Auto-format JS/TS files with Prettier\ncase \"$CLAUDE_TOOL_INPUT_FILE_PATH\" in\n  *.js|*.jsx|*.ts|*.tsx)\n    npx prettier --write \"$CLAUDE_TOOL_INPUT_FILE_PATH\" 2>&1\n    if [ $? -ne 0 ]; then\n      echo '{\"feedback\": \"Formatting failed. Check file for syntax errors.\"}' >&2\n      exit 1\n    else\n      echo '{\"feedback\": \"Formatting applied.\", \"suppressOutput\": true}'\n    fi\n    ;;\nesac",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "# Auto-install dependencies when package.json changes\ncase \"$CLAUDE_TOOL_INPUT_FILE_PATH\" in\n  *package.json)\n    echo '{\"feedback\": \"Installing dependencies...\"}' >&2\n    npm install >/dev/null 2>&1 && echo '{\"feedback\": \"Dependencies installed.\", \"suppressOutput\": true}' || {\n      echo '{\"feedback\": \"Failed to install dependencies.\"}' >&2\n      exit 1\n    }\n    ;;\nesac",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "# Auto-run tests when test files change\ncase \"$CLAUDE_TOOL_INPUT_FILE_PATH\" in\n  *.test.js|*.test.jsx|*.test.ts|*.test.tsx)\n    echo '{\"feedback\": \"Running tests...\"}' >&2\n    npm test -- --findRelatedTests \"${CLAUDE_TOOL_INPUT_FILE_PATH}\" --passWithNoTests > /tmp/_claude_test_out.txt 2>&1\n    exit_code=$?\n    tail -30 /tmp/_claude_test_out.txt\n    rm -f /tmp/_claude_test_out.txt\n    if [ $exit_code -eq 0 ]; then\n      echo '{\"feedback\": \"Tests passed.\"}'\n    else\n      echo '{\"feedback\": \"Tests failed. See output above.\"}' >&2\n    fi\n    ;;\nesac",
+            "timeout": 90
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "# Type-check TypeScript files\ncase \"$CLAUDE_TOOL_INPUT_FILE_PATH\" in\n  *.ts|*.tsx)\n    echo '{\"feedback\": \"Checking TypeScript types...\"}' >&2\n    output=$(npx tsc --noEmit 2>&1)\n    if [ $? -eq 0 ]; then\n      echo '{\"feedback\": \"No TypeScript errors.\", \"suppressOutput\": true}'\n    else\n      errors=$(printf '%s' \"$output\" | grep -A 2 \"error TS\" | head -30)\n      if [ -n \"$errors\" ]; then\n        echo '{\"feedback\": \"TypeScript found type errors:\"}' >&2\n        printf '%s\\n' \"$errors\" >&2\n      fi\n    fi\n    exit 0\n    ;;\nesac",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "# Update task list from TASK.md\nif [[ \"$CLAUDE_TOOL_INPUT_FILE_PATH\" == *TASK.md ]]; then\n  echo '{\"feedback\": \"Updating task list...\"}' >&2\n  # Custom script to parse TASK.md and update status (placeholder)\n  # e.g., python .claude/hooks/update_tasks.py \"$CLAUDE_TOOL_INPUT_FILE_PATH\"\n  echo '{\"feedback\": \"Task list updated.\", \"suppressOutput\": true}'\nfi",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
