@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useChangePassword } from "../hooks";
 
@@ -28,9 +28,9 @@ export function ChangePasswordForm() {
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="currentPassword">Current password</Label>
-        <Input
+        <PasswordInput
           id="currentPassword"
-          type="password"
+          autoComplete="current-password"
           required
           value={currentPassword}
           onChange={(event) => setCurrentPassword(event.target.value)}
@@ -38,9 +38,9 @@ export function ChangePasswordForm() {
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="newPassword">New password</Label>
-        <Input
+        <PasswordInput
           id="newPassword"
-          type="password"
+          autoComplete="new-password"
           required
           minLength={8}
           value={newPassword}
