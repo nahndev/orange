@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, type FormEvent } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,7 +30,7 @@ export default function LoginPage() {
     const result = await signIn("credentials", {
       email,
       password,
-      redirect: false
+      redirect: false,
     });
 
     setIsSubmitting(false);
@@ -34,7 +40,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dictionaries");
+    router.push("/dashboard/dictionaries");
     router.refresh();
   }
 
@@ -42,7 +48,9 @@ export default function LoginPage() {
     <Card>
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
-        <CardDescription>Sign in to manage your translation dictionaries.</CardDescription>
+        <CardDescription>
+          Sign in to manage your translation dictionaries.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>

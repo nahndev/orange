@@ -1,10 +1,16 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ProfileForm } from "@/features/account/components/profile-form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ChangePasswordForm } from "@/features/account/components/change-password-form";
+import { ProfileForm } from "@/features/account/components/profile-form";
 
 export default function ProfilePage() {
   return (
-    <div className="flex max-w-xl flex-col gap-6">
+    <div className="flex max-w-xl mx-auto flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle>Profile</CardTitle>
