@@ -19,12 +19,6 @@ This directory contains project-specific skills that provide Claude with domain 
 | [core-components](./core-components/SKILL.md)     | Design system components, tokens, component library           |
 | [formik-patterns](./formik-patterns/SKILL.md)     | Form handling, validation, submission patterns                |
 
-### Data & API
-
-| Skill                                       | Description                                 |
-| ------------------------------------------- | ------------------------------------------- |
-| [graphql-schema](./graphql-schema/SKILL.md) | GraphQL queries, mutations, code generation |
-
 ### Ticket
 
 | Skill                         | Description                    |

@@ -1,29 +1,27 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
+import axios, { type AxiosError } from "axios";
+import { getSession } from "next-auth/react";
 
-interface ApiFetchOptions extends RequestInit {
-  token?: string;
-}
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/rest";
 
-export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
-  const { token, headers, ...rest } = options;
+export const apiClient = axios.create({
+  baseURL: API_URL,
+  headers: { "Content-Type": "application/json" }
+});
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...rest,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers
-    }
-  });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    throw new Error(body?.message ?? `Request failed with status ${response.status}`);
+// getSession() hits the NextAuth session endpoint via relative fetch, so this only works client-side.
+apiClient.interceptors.request.use(async (config) => {
+  const session = await getSession();
+  if (session?.accessToken) {
+    config.headers.Authorization = `Bearer ${session.accessToken}`;
   }
+  return config;
+});
 
-  if (response.status === 204) {
-    return undefined as T;
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<{ message?: string | string[] }>) => {
+    const responseMessage = error.response?.data?.message;
+    const message = Array.isArray(responseMessage) ? responseMessage.join(", ") : responseMessage;
+    return Promise.reject(new Error(message ?? error.message));
   }
-
-  return response.json() as Promise<T>;
-}
+);

@@ -42,9 +42,10 @@ pnpm --filter @orange/backend prisma:migrate
 pnpm dev                # runs backend + frontend via turbo
 ```
 
-The frontend proxies `/api/*` to the backend (see `apps/frontend/next.config.js`), so the
+The frontend proxies `/rest/*` to the backend (see `apps/frontend/next.config.js`), so the
 browser only ever talks to the Next.js origin — no CORS setup needed. The backend's global
-prefix is also `api` (`app.setGlobalPrefix("api")` in `main.ts`), so paths match 1:1 end to end.
+prefix is also `rest` (`app.setGlobalPrefix("rest")` in `main.ts`), so paths match 1:1 end to
+end. This keeps the backend namespace separate from `/api/auth/*`, which NextAuth owns.
 
 ## Code style
 
@@ -72,8 +73,8 @@ ones:
 | `DATABASE_URL` | backend | Postgres connection string (Prisma) |
 | `MEILISEARCH_HOST` / `MEILISEARCH_API_KEY` | backend | Search engine used for translation ranking |
 | `OLLAMA_HOST` / `OLLAMA_MODEL` | backend | Local AI model used for auto-translation |
-| `BACKEND_URL` | frontend | Server-side target for the `/api/*` rewrite |
-| `NEXT_PUBLIC_API_URL` | frontend | Client-side base path (`/api`) |
+| `BACKEND_URL` | frontend | Server-side target for the `/rest/*` rewrite |
+| `NEXT_PUBLIC_API_URL` | frontend | Client-side base path (`/rest`) |
 | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` | frontend | NextAuth base site URL and signing secret |
 
 ## Pull requests

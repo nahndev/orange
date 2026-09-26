@@ -7,23 +7,20 @@ import { changePassword, getProfile, updateProfile } from "@/services/account-se
 import { accountKeys } from "./query-keys";
 
 export function useProfile() {
-  const { data: session } = useSession();
-  const token = session?.accessToken;
+  const { status } = useSession();
 
   return useQuery({
     queryKey: accountKeys.profile(),
-    queryFn: () => getProfile(token as string),
-    enabled: Boolean(token)
+    queryFn: () => getProfile(),
+    enabled: status === "authenticated"
   });
 }
 
 export function useUpdateProfile() {
-  const { data: session } = useSession();
-  const token = session?.accessToken;
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: UpdateProfileRequest) => updateProfile(token as string, data),
+    mutationFn: (data: UpdateProfileRequest) => updateProfile(data),
     onSuccess: (data) => {
       queryClient.setQueryData(accountKeys.profile(), data);
     }
@@ -31,10 +28,7 @@ export function useUpdateProfile() {
 }
 
 export function useChangePassword() {
-  const { data: session } = useSession();
-  const token = session?.accessToken;
-
   return useMutation({
-    mutationFn: (data: ChangePasswordRequest) => changePassword(token as string, data)
+    mutationFn: (data: ChangePasswordRequest) => changePassword(data)
   });
 }

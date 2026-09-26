@@ -1,22 +1,17 @@
-import { apiFetch } from "@/lib/api-client";
+import { apiClient } from "@/lib/api-client";
 import type { AuthUser, ChangePasswordRequest, UpdateProfileRequest } from "@orange/shared-types";
 
-export function getProfile(token: string) {
-  return apiFetch<AuthUser>("/account/profile", { token });
+export async function getProfile() {
+  const { data } = await apiClient.get<AuthUser>("/account/profile");
+  return data;
 }
 
-export function updateProfile(token: string, data: UpdateProfileRequest) {
-  return apiFetch<AuthUser>("/account/profile", {
-    method: "PATCH",
-    token,
-    body: JSON.stringify(data)
-  });
+export async function updateProfile(payload: UpdateProfileRequest) {
+  const { data } = await apiClient.patch<AuthUser>("/account/profile", payload);
+  return data;
 }
 
-export function changePassword(token: string, data: ChangePasswordRequest) {
-  return apiFetch<{ success: boolean }>("/account/change-password", {
-    method: "POST",
-    token,
-    body: JSON.stringify(data)
-  });
+export async function changePassword(payload: ChangePasswordRequest) {
+  const { data } = await apiClient.post<{ success: boolean }>("/account/change-password", payload);
+  return data;
 }
