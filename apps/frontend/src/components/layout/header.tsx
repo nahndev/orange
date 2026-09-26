@@ -9,7 +9,6 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/dashboard/dictionaries", label: "Dictionaries" },
-  { href: "/dashboard/languages", label: "Languages" },
   { href: "/dashboard/commit-jobs", label: "Jobs" },
 ];
 
