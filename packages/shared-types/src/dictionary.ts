@@ -72,6 +72,13 @@ export interface ListDictionarySentencesQuery {
   q?: string;
 }
 
+export interface TranslateDictionarySentenceRequest {
+  text: string;
+  languages: DictionaryLanguage[];
+}
+
+export type TranslateDictionarySentenceResult = Record<string, string>;
+
 export interface DictionaryRelatedWord {
   key: string;
   values: DictionaryEntryValues;

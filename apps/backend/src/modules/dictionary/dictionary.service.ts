@@ -28,17 +28,24 @@ import type { ApiTranslatorInterface } from "../translation/api-translator.inter
 import { WORD_RANKING } from "../search/word-ranking.interface";
 import type { WordRankingInterface } from "../search/word-ranking.interface";
 import { SENTENCE_SEARCH } from "../search/sentence-search.interface";
-import type { SentenceSearchInterface } from "../search/sentence-search.interface";
+import type { SentenceSearchInterface, SimilarDictionarySentence } from "../search/sentence-search.interface";
 import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
 import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
+import { TranslateDictionarySentenceDto } from "./dto/translate-dictionary-sentence.dto";
 import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
 import { UpdateDictionarySentenceDto } from "./dto/update-dictionary-sentence.dto";
 
 const SIMILAR_WORD_LIMIT = 5;
+const SIMILAR_SENTENCE_LIMIT = 5;
+const MAX_TRANSLATION_CONTEXT_LENGTH = 2000;
 
 const COUNTRY_CODES = new Set(COUNTRIES.map((country) => country.code));
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 type DictionaryWithLanguages = DictionaryRecord & {
   languages: { key: string; country: string }[];
@@ -73,6 +80,8 @@ export class DictionaryService {
       data: { name: dto.name },
       include: { languages: true },
     });
+
+    await this.safeCreateIndexes(dictionary.id);
 
     return this.toDictionary(dictionary);
   }
@@ -178,6 +187,7 @@ export class DictionaryService {
   async remove(id: string): Promise<void> {
     await this.findOrThrow(id);
     await this.prisma.dictionary.delete({ where: { id } });
+    await this.safeDeleteIndexes(id);
   }
 
   async addEntry(
@@ -341,6 +351,107 @@ export class DictionaryService {
   async findSimilarWords(dictionaryId: string, word: string): Promise<string[]> {
     await this.findOrThrow(dictionaryId);
     return this.wordRanking.findSimilarWords(dictionaryId, word, SIMILAR_WORD_LIMIT);
+  }
+
+  async translateSentence(
+    dictionaryId: string,
+    dto: TranslateDictionarySentenceDto,
+  ): Promise<Record<string, string>> {
+    const dictionary = await this.findOrThrow(dictionaryId);
+
+    const matchedEntries = dictionary.entries.filter((entry) => {
+      const values = (entry.values as unknown as DictionaryEntryValues) ?? {};
+      const candidates = [entry.key, ...Object.values(values)];
+      return candidates.some(
+        (candidate) =>
+          candidate?.trim() &&
+          new RegExp(`\\b${escapeRegExp(candidate)}\\b`, "i").test(dto.text),
+      );
+    });
+    const similarSentences = await this.safeFindSimilarSentences(dictionaryId, dto.text);
+
+    return this.apiTranslator.translate({
+      text: dto.text,
+      languages: dto.languages,
+      context: this.buildTranslationContext(dictionary, matchedEntries, similarSentences),
+    });
+  }
+
+  private buildTranslationContext(
+    dictionary: DictionaryWithLanguagesAndEntries,
+    matchedEntries: DictionaryEntryRecord[],
+    similarSentences: SimilarDictionarySentence[],
+  ): string | undefined {
+    const sections: string[] = [];
+
+    if (dictionary.description) {
+      sections.push(`Dictionary description: ${dictionary.description}`);
+    }
+
+    if (matchedEntries.length > 0) {
+      const hint = matchedEntries
+        .map((entry) => {
+          const values = (entry.values as unknown as DictionaryEntryValues) ?? {};
+          return `${entry.key}: ${Object.entries(values)
+            .map(([lang, value]) => `${lang}=${value}`)
+            .join(", ")}`;
+        })
+        .join("\n");
+      sections.push(`Use these exact translations for these terms:\n${hint}`);
+    }
+
+    if (similarSentences.length > 0) {
+      const hint = similarSentences
+        .map((sentence) =>
+          Object.entries(sentence.values)
+            .map(([lang, value]) => `${lang}=${value}`)
+            .join(", "),
+        )
+        .join("\n");
+      sections.push(`Similar sentences already translated in this dictionary:\n${hint}`);
+    }
+
+    if (sections.length === 0) {
+      return undefined;
+    }
+
+    return sections.join("\n\n").slice(0, MAX_TRANSLATION_CONTEXT_LENGTH);
+  }
+
+  private async safeFindSimilarSentences(
+    dictionaryId: string,
+    text: string,
+  ): Promise<SimilarDictionarySentence[]> {
+    try {
+      return await this.sentenceSearch.findSimilarSentences(dictionaryId, text, SIMILAR_SENTENCE_LIMIT);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to find similar sentences for dictionary ${dictionaryId}: ${(error as Error).message}`,
+      );
+      return [];
+    }
+  }
+
+  private async safeCreateIndexes(dictionaryId: string): Promise<void> {
+    try {
+      await this.wordRanking.createIndex(dictionaryId);
+      await this.sentenceSearch.createIndex(dictionaryId);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to create search indexes for dictionary ${dictionaryId}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  private async safeDeleteIndexes(dictionaryId: string): Promise<void> {
+    try {
+      await this.wordRanking.deleteIndex(dictionaryId);
+      await this.sentenceSearch.deleteIndex(dictionaryId);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to delete search indexes for dictionary ${dictionaryId}: ${(error as Error).message}`,
+      );
+    }
   }
 
   private async safeIndexEntry(

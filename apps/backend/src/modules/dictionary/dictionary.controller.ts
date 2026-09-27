@@ -17,6 +17,7 @@ import { DictionaryService } from "./dictionary.service";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
 import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
 import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
+import { TranslateDictionarySentenceDto } from "./dto/translate-dictionary-sentence.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
 import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
 import { UpdateDictionarySentenceDto } from "./dto/update-dictionary-sentence.dto";
@@ -109,5 +110,10 @@ export class DictionaryController {
       throw new BadRequestException("word query parameter is required");
     }
     return this.dictionaryService.findSimilarWords(id, word);
+  }
+
+  @Post(":id/translations")
+  translate(@Param("id") id: string, @Body() dto: TranslateDictionarySentenceDto) {
+    return this.dictionaryService.translateSentence(id, dto);
   }
 }

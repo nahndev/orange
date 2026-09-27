@@ -8,6 +8,8 @@ import type {
   DictionaryEntry,
   DictionarySentence,
   ListDictionarySentencesQuery,
+  TranslateDictionarySentenceRequest,
+  TranslateDictionarySentenceResult,
   UpdateDictionaryEntryRequest,
   UpdateDictionaryRequest,
   UpdateDictionarySentenceRequest
@@ -72,6 +74,17 @@ export async function updateDictionarySentence(
 ) {
   const { data } = await apiClient.patch<DictionarySentence>(
     `/dictionaries/${dictionaryId}/sentences/${sentenceId}`,
+    payload
+  );
+  return data;
+}
+
+export async function translateDictionarySentence(
+  dictionaryId: string,
+  payload: TranslateDictionarySentenceRequest
+) {
+  const { data } = await apiClient.post<TranslateDictionarySentenceResult>(
+    `/dictionaries/${dictionaryId}/translations`,
     payload
   );
   return data;

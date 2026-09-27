@@ -1,12 +1,13 @@
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { Injectable } from "@nestjs/common";
+import { MeilisearchClient } from "./meilisearch-client.service";
+import { MeilisearchIndexName } from "./meilisearch-index-name";
 import type {
-  RankableDictionarySentence,
+  DictionarySentenceDocument,
   SentenceSearchInterface,
   SentenceSearchQuery,
+  SimilarDictionarySentence,
 } from "./sentence-search.interface";
 
-const INDEX_NAME = "dictionary_sentences";
 const DEFAULT_LIMIT = 50;
 
 interface MeilisearchHit {
@@ -17,37 +18,36 @@ interface MeilisearchSearchResponse {
   hits: MeilisearchHit[];
 }
 
+interface MeilisearchValuesHit {
+  id: string;
+  values: Record<string, string>;
+}
+
+interface MeilisearchValuesSearchResponse {
+  hits: MeilisearchValuesHit[];
+}
+
 @Injectable()
-export class MeilisearchSentenceSearchService implements SentenceSearchInterface, OnModuleInit {
-  private readonly logger = new Logger(MeilisearchSentenceSearchService.name);
+export class MeilisearchSentenceSearchService implements SentenceSearchInterface {
+  private readonly indexName = new MeilisearchIndexName("dictionary_sentences");
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly client: MeilisearchClient) {}
 
-  async onModuleInit(): Promise<void> {
-    try {
-      await this.request(`/indexes`, "POST", { uid: INDEX_NAME, primaryKey: "id" });
-    } catch {
-      // Index likely already exists; safe to ignore.
-    }
-
-    try {
-      await this.request(`/indexes/${INDEX_NAME}/settings/filterable-attributes`, "PUT", [
-        "dictionaryId",
-        "languages",
-      ]);
-      await this.request(`/indexes/${INDEX_NAME}/settings/sortable-attributes`, "PUT", ["createdAt"]);
-    } catch (error) {
-      this.logger.warn(
-        `Failed to configure Meilisearch filterable/sortable attributes: ${(error as Error).message}`,
-      );
-    }
+  async createIndex(dictionaryId: string): Promise<void> {
+    const indexName = this.indexName.for(dictionaryId);
+    await this.client.request(`/indexes`, "POST", { uid: indexName, primaryKey: "id" });
+    await this.client.request(`/indexes/${indexName}/settings/filterable-attributes`, "PUT", ["languages"]);
+    await this.client.request(`/indexes/${indexName}/settings/sortable-attributes`, "PUT", ["createdAt"]);
   }
 
-  async indexSentence(dictionaryId: string, sentence: RankableDictionarySentence): Promise<void> {
-    await this.request(`/indexes/${INDEX_NAME}/documents`, "POST", [
+  async deleteIndex(dictionaryId: string): Promise<void> {
+    await this.client.request(`/indexes/${this.indexName.for(dictionaryId)}`, "DELETE");
+  }
+
+  async indexSentence(dictionaryId: string, sentence: DictionarySentenceDocument): Promise<void> {
+    await this.client.request(`/indexes/${this.indexName.for(dictionaryId)}/documents`, "POST", [
       {
         id: sentence.id,
-        dictionaryId,
         languages: Object.keys(sentence.values).filter((key) => sentence.values[key]?.trim()),
         values: sentence.values,
         createdAt: sentence.createdAt,
@@ -55,21 +55,21 @@ export class MeilisearchSentenceSearchService implements SentenceSearchInterface
     ]);
   }
 
-  async removeSentence(_dictionaryId: string, sentenceId: string): Promise<void> {
-    await this.request(`/indexes/${INDEX_NAME}/documents/${sentenceId}`, "DELETE");
+  async removeSentence(dictionaryId: string, sentenceId: string): Promise<void> {
+    await this.client.request(`/indexes/${this.indexName.for(dictionaryId)}/documents/${sentenceId}`, "DELETE");
   }
 
   async searchSentences(dictionaryId: string, { language, query, limit = DEFAULT_LIMIT }: SentenceSearchQuery): Promise<string[]> {
-    const filters = [`dictionaryId = "${dictionaryId}"`];
+    const filters: string[] = [];
     if (language) {
       filters.push(`languages = "${language}"`);
     }
 
     const searchOnSelectedLanguage = Boolean(language && query);
 
-    const response = await this.request<MeilisearchSearchResponse>(`/indexes/${INDEX_NAME}/search`, "POST", {
+    const response = await this.client.request<MeilisearchSearchResponse>(`/indexes/${this.indexName.for(dictionaryId)}/search`, "POST", {
       q: searchOnSelectedLanguage ? query : "",
-      filter: filters.join(" AND "),
+      ...(filters.length > 0 ? { filter: filters.join(" AND ") } : {}),
       sort: ["createdAt:desc"],
       limit,
       ...(searchOnSelectedLanguage ? { attributesToSearchOn: [`values.${language}`] } : {}),
@@ -78,27 +78,12 @@ export class MeilisearchSentenceSearchService implements SentenceSearchInterface
     return response.hits.map((hit) => hit.id);
   }
 
-  private async request<T = unknown>(path: string, method: string, body?: unknown): Promise<T> {
-    const host = this.config.get<string>("MEILISEARCH_HOST", "http://localhost:7701");
-    const apiKey = this.config.get<string>("MEILISEARCH_API_KEY");
-
-    const response = await fetch(`${host}${path}`, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+  async findSimilarSentences(dictionaryId: string, text: string, limit: number): Promise<SimilarDictionarySentence[]> {
+    const response = await this.client.request<MeilisearchValuesSearchResponse>(`/indexes/${this.indexName.for(dictionaryId)}/search`, "POST", {
+      q: text,
+      limit,
     });
 
-    if (!response.ok) {
-      throw new Error(`Meilisearch request to ${path} failed with status ${response.status}`);
-    }
-
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return (await response.json()) as T;
+    return response.hits.map((hit) => ({ id: hit.id, values: hit.values }));
   }
 }

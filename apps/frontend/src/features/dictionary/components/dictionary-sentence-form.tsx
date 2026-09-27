@@ -18,30 +18,6 @@ function findMissingLanguageKeys(languageKeys: string[], values: DictionaryEntry
   return languageKeys.filter((languageKey) => !values[languageKey]?.trim());
 }
 
-function buildGlossaryContext(
-  sentence: string,
-  entries: { key: string; values: DictionaryEntryValues }[]
-): string | undefined {
-  const matched = entries.filter((entry) =>
-    new RegExp(`\\b${entry.key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(sentence)
-  );
-
-  if (matched.length === 0) {
-    return undefined;
-  }
-
-  const hint = matched
-    .map(
-      (entry) =>
-        `${entry.key}: ${Object.entries(entry.values)
-          .map(([lang, value]) => `${lang}=${value}`)
-          .join(", ")}`
-    )
-    .join("\n");
-
-  return `Use these exact translations for these terms:\n${hint}`.slice(0, 1000);
-}
-
 interface DictionarySentenceFormProps {
   dictionaryId: string;
   editingSentence?: DictionarySentence | null;
@@ -52,7 +28,7 @@ export function DictionarySentenceForm({ dictionaryId, editingSentence, onEditCo
   const { data: dictionary } = useDictionary(dictionaryId);
   const createSentence = useCreateDictionarySentence(dictionaryId);
   const updateSentence = useUpdateDictionarySentence(dictionaryId);
-  const translateSentence = useTranslateDictionarySentence();
+  const translateSentence = useTranslateDictionarySentence(dictionaryId);
 
   const [values, setValues] = useState<DictionaryEntryValues>({});
   const [missingKeys, setMissingKeys] = useState<string[]>([]);
@@ -63,7 +39,6 @@ export function DictionarySentenceForm({ dictionaryId, editingSentence, onEditCo
   }, [editingSentence]);
 
   const languages = dictionary?.languages ?? [];
-  const entries = dictionary?.entries ?? [];
 
   const sourceLanguage = languages.find((language) => values[language.key]?.trim());
 
@@ -88,8 +63,7 @@ export function DictionarySentenceForm({ dictionaryId, editingSentence, onEditCo
     translateSentence.mutate(
       {
         text: sourceText,
-        languages: targetLanguages,
-        context: buildGlossaryContext(sourceText, entries)
+        languages: targetLanguages
       },
       {
         onSuccess: (translations) => {

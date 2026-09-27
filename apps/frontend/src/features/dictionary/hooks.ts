@@ -7,7 +7,7 @@ import type {
   CreateDictionaryRequest,
   CreateDictionarySentenceRequest,
   ListDictionarySentencesQuery,
-  TranslateRequest,
+  TranslateDictionarySentenceRequest,
   UpdateDictionaryEntryRequest,
   UpdateDictionaryRequest,
   UpdateDictionarySentenceRequest
@@ -21,11 +21,11 @@ import {
   getDictionary,
   listDictionaries,
   listDictionarySentences,
+  translateDictionarySentence,
   updateDictionary,
   updateDictionaryEntry,
   updateDictionarySentence
 } from "@/services/dictionary-service";
-import { translateText } from "@/services/translation-service";
 import { dictionaryKeys } from "./query-keys";
 
 export function useDictionaries() {
@@ -149,8 +149,8 @@ export function useUpdateDictionarySentence(dictionaryId: string) {
   });
 }
 
-export function useTranslateDictionarySentence() {
+export function useTranslateDictionarySentence(dictionaryId: string) {
   return useMutation({
-    mutationFn: (payload: TranslateRequest) => translateText(payload)
+    mutationFn: (payload: TranslateDictionarySentenceRequest) => translateDictionarySentence(dictionaryId, payload)
   });
 }

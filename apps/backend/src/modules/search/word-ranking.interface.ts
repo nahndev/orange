@@ -1,4 +1,4 @@
-export interface RankableDictionaryEntry {
+export interface DictionaryEntryDocument {
   id: string;
   key: string;
   description: string | null;
@@ -6,7 +6,9 @@ export interface RankableDictionaryEntry {
 }
 
 export interface WordRankingInterface {
-  indexEntry(dictionaryId: string, entry: RankableDictionaryEntry): Promise<void>;
+  createIndex(dictionaryId: string): Promise<void>;
+  deleteIndex(dictionaryId: string): Promise<void>;
+  indexEntry(dictionaryId: string, entry: DictionaryEntryDocument): Promise<void>;
   removeEntry(dictionaryId: string, entryId: string): Promise<void>;
   findSimilarWords(dictionaryId: string, word: string, limit?: number): Promise<string[]>;
 }
