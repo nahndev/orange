@@ -4,7 +4,6 @@ import {
   Controller,
   Delete,
   Get,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -15,11 +14,11 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { DictionaryService } from "./dictionary.service";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
-import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
+import { CreateDictionaryTermDto } from "./dto/create-dictionary-term.dto";
 import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
 import { TranslateDictionarySentenceDto } from "./dto/translate-dictionary-sentence.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
-import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
+import { UpdateDictionaryTermDto } from "./dto/update-dictionary-term.dto";
 import { UpdateDictionarySentenceDto } from "./dto/update-dictionary-sentence.dto";
 
 @ApiTags("dictionaries")
@@ -55,34 +54,20 @@ export class DictionaryController {
     return { success: true };
   }
 
-  @Post(":id/entries")
-  addEntry(@Param("id") id: string, @Body() dto: CreateDictionaryEntryDto) {
-    return this.dictionaryService.addEntry(id, dto);
+  @Post(":id/terms")
+  addTerm(@Param("id") id: string, @Body() dto: CreateDictionaryTermDto) {
+    return this.dictionaryService.addTerm(id, dto);
   }
 
-  @Patch(":id/entries/:entryId")
-  updateEntry(@Param("id") id: string, @Param("entryId") entryId: string, @Body() dto: UpdateDictionaryEntryDto) {
-    return this.dictionaryService.updateEntry(id, entryId, dto);
+  @Patch(":id/terms/:termId")
+  updateTerm(@Param("id") id: string, @Param("termId") termId: string, @Body() dto: UpdateDictionaryTermDto) {
+    return this.dictionaryService.updateTerm(id, termId, dto);
   }
 
-  @Delete(":id/entries/:entryId")
-  async removeEntry(@Param("id") id: string, @Param("entryId") entryId: string) {
-    await this.dictionaryService.removeEntry(id, entryId);
+  @Delete(":id/terms/:termId")
+  async removeTerm(@Param("id") id: string, @Param("termId") termId: string) {
+    await this.dictionaryService.removeTerm(id, termId);
     return { success: true };
-  }
-
-  @Post(":id/entries/:entryId/context")
-  generateContext(@Param("id") id: string, @Param("entryId") entryId: string) {
-    return this.dictionaryService.generateContext(id, entryId);
-  }
-
-  @Get(":id/entries/:entryId/context")
-  async getContext(@Param("id") id: string, @Param("entryId") entryId: string) {
-    const context = await this.dictionaryService.getContext(id, entryId);
-    if (!context) {
-      throw new NotFoundException("Dictionary context not found");
-    }
-    return context;
   }
 
   @Post(":id/sentences")

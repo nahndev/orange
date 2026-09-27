@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { DictionaryEntryValues, DictionarySentence } from "@orange/shared-types";
+import type { DictionarySentence, DictionaryTermValues } from "@orange/shared-types";
 import { SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import {
 } from "../hooks";
 import { LanguageName } from "./language-name";
 
-function findMissingLanguageKeys(languageKeys: string[], values: DictionaryEntryValues): string[] {
+function findMissingLanguageKeys(languageKeys: string[], values: DictionaryTermValues): string[] {
   return languageKeys.filter((languageKey) => !values[languageKey]?.trim());
 }
 
@@ -30,7 +30,7 @@ export function DictionarySentenceForm({ dictionaryId, editingSentence, onEditCo
   const updateSentence = useUpdateDictionarySentence(dictionaryId);
   const translateSentence = useTranslateDictionarySentence(dictionaryId);
 
-  const [values, setValues] = useState<DictionaryEntryValues>({});
+  const [values, setValues] = useState<DictionaryTermValues>({});
   const [missingKeys, setMissingKeys] = useState<string[]>([]);
 
   useEffect(() => {

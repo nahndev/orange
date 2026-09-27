@@ -1,24 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectPinoLogger, PinoLogger } from "nestjs-pino";
-import type {
-  ApiTranslatorInterface,
-  GenerateContextInput,
-  GeneratedDictionaryContext,
-  TranslateInput,
-} from "./api-translator.interface";
+import type { ApiTranslatorInterface, TranslateInput } from "./api-translator.interface";
 
 interface OllamaGenerateResponse {
   response: string;
 }
-
-interface RawGeneratedContext {
-  description: string;
-  keywords: string[];
-  relatedWords: string[];
-}
-
-const RELATED_WORD_COUNT = 5;
 
 @Injectable()
 export class ApiTranslator implements ApiTranslatorInterface {
@@ -42,41 +29,6 @@ export class ApiTranslator implements ApiTranslatorInterface {
     this.logger.info(prompt);
     const raw = await this.callOllama(prompt);
     return this.parseTranslations(raw, languageKeys);
-  }
-
-  async generateContext(
-    input: GenerateContextInput,
-  ): Promise<GeneratedDictionaryContext> {
-    const prompt = [
-      `You are building a glossary context entry for the word "${input.word}".`,
-      input.description
-        ? `Existing description: ${input.description}`
-        : undefined,
-      `Respond with strict JSON only in this exact shape: {"description": string, "keywords": string[], "relatedWords": string[]}.`,
-      `"description" is a short definition of the word. "keywords" is a list of short tags describing its meaning. "relatedWords" is a list of exactly ${RELATED_WORD_COUNT} words closely related to or synonymous with "${input.word}". Do not include any other keys or commentary.`,
-    ]
-      .filter((line): line is string => Boolean(line))
-      .join("\n");
-
-    this.logger.info(prompt);
-    const raw = await this.callOllama(prompt);
-    const parsed = this.parseContext(raw);
-
-    const relatedWords = await Promise.all(
-      parsed.relatedWords.slice(0, RELATED_WORD_COUNT).map(async (word) => ({
-        key: word,
-        values: await this.translate({
-          text: word,
-          languages: input.languages,
-        }),
-      })),
-    );
-
-    return {
-      description: parsed.description,
-      keywords: parsed.keywords,
-      relatedWords,
-    };
   }
 
   private async callOllama(prompt: string): Promise<string> {
@@ -113,27 +65,6 @@ export class ApiTranslator implements ApiTranslatorInterface {
     }
 
     return result;
-  }
-
-  private parseContext(raw: string): RawGeneratedContext {
-    const parsed = this.parseJson(raw);
-    const keywords = parsed.keywords;
-    const relatedWords = parsed.relatedWords;
-
-    return {
-      description:
-        typeof parsed.description === "string" ? parsed.description : "",
-      keywords: Array.isArray(keywords)
-        ? keywords.filter(
-            (keyword): keyword is string => typeof keyword === "string",
-          )
-        : [],
-      relatedWords: Array.isArray(relatedWords)
-        ? relatedWords.filter(
-            (word): word is string => typeof word === "string",
-          )
-        : [],
-    };
   }
 
   private parseJson(raw: string): Record<string, unknown> {

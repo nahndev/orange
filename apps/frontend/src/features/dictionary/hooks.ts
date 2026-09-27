@@ -3,28 +3,28 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import type {
-  CreateDictionaryEntryRequest,
   CreateDictionaryRequest,
   CreateDictionarySentenceRequest,
+  CreateDictionaryTermRequest,
   ListDictionarySentencesQuery,
   TranslateDictionarySentenceRequest,
-  UpdateDictionaryEntryRequest,
   UpdateDictionaryRequest,
-  UpdateDictionarySentenceRequest
+  UpdateDictionarySentenceRequest,
+  UpdateDictionaryTermRequest
 } from "@orange/shared-types";
 import {
   createDictionary,
-  createDictionaryEntry,
   createDictionarySentence,
+  createDictionaryTerm,
   deleteDictionary,
-  deleteDictionaryEntry,
+  deleteDictionaryTerm,
   getDictionary,
   listDictionaries,
   listDictionarySentences,
   translateDictionarySentence,
   updateDictionary,
-  updateDictionaryEntry,
-  updateDictionarySentence
+  updateDictionarySentence,
+  updateDictionaryTerm
 } from "@/services/dictionary-service";
 import { dictionaryKeys } from "./query-keys";
 
@@ -82,34 +82,34 @@ export function useDeleteDictionary() {
   });
 }
 
-export function useCreateDictionaryEntry(dictionaryId: string) {
+export function useCreateDictionaryTerm(dictionaryId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateDictionaryEntryRequest) => createDictionaryEntry(dictionaryId, data),
+    mutationFn: (data: CreateDictionaryTermRequest) => createDictionaryTerm(dictionaryId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dictionaryKeys.detail(dictionaryId) });
     }
   });
 }
 
-export function useUpdateDictionaryEntry(dictionaryId: string) {
+export function useUpdateDictionaryTerm(dictionaryId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ entryId, data }: { entryId: string; data: UpdateDictionaryEntryRequest }) =>
-      updateDictionaryEntry(dictionaryId, entryId, data),
+    mutationFn: ({ termId, data }: { termId: string; data: UpdateDictionaryTermRequest }) =>
+      updateDictionaryTerm(dictionaryId, termId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dictionaryKeys.detail(dictionaryId) });
     }
   });
 }
 
-export function useDeleteDictionaryEntry(dictionaryId: string) {
+export function useDeleteDictionaryTerm(dictionaryId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (entryId: string) => deleteDictionaryEntry(dictionaryId, entryId),
+    mutationFn: (termId: string) => deleteDictionaryTerm(dictionaryId, termId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dictionaryKeys.detail(dictionaryId) });
     }

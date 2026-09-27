@@ -3,13 +3,13 @@ export interface DictionaryLanguage {
   country: string;
 }
 
-export type DictionaryEntryValues = Record<string, string>;
+export type DictionaryTermValues = Record<string, string>;
 
-export interface DictionaryEntry {
+export interface DictionaryTerm {
   id: string;
   key: string;
   description: string | null;
-  values: DictionaryEntryValues;
+  values: DictionaryTermValues;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,13 +26,13 @@ export interface Dictionary {
 
 export interface DictionarySentence {
   id: string;
-  values: DictionaryEntryValues;
+  values: DictionaryTermValues;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface DictionaryDetail extends Dictionary {
-  entries: DictionaryEntry[];
+  terms: DictionaryTerm[];
   sentences: DictionarySentence[];
 }
 
@@ -47,24 +47,24 @@ export interface UpdateDictionaryRequest {
   languages?: DictionaryLanguage[];
 }
 
-export interface CreateDictionaryEntryRequest {
+export interface CreateDictionaryTermRequest {
   key: string;
   description?: string;
-  values: DictionaryEntryValues;
+  values: DictionaryTermValues;
 }
 
-export interface UpdateDictionaryEntryRequest {
+export interface UpdateDictionaryTermRequest {
   key?: string;
   description?: string;
-  values?: DictionaryEntryValues;
+  values?: DictionaryTermValues;
 }
 
 export interface CreateDictionarySentenceRequest {
-  values: DictionaryEntryValues;
+  values: DictionaryTermValues;
 }
 
 export interface UpdateDictionarySentenceRequest {
-  values: DictionaryEntryValues;
+  values: DictionaryTermValues;
 }
 
 export interface ListDictionarySentencesQuery {
@@ -78,16 +78,3 @@ export interface TranslateDictionarySentenceRequest {
 }
 
 export type TranslateDictionarySentenceResult = Record<string, string>;
-
-export interface DictionaryRelatedWord {
-  key: string;
-  values: DictionaryEntryValues;
-}
-
-export interface DictionaryContext {
-  description: string;
-  keywords: string[];
-  relatedWords: DictionaryRelatedWord[];
-  createdAt: string;
-  updatedAt: string;
-}

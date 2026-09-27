@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsObject, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
-export class CreateDictionaryEntryDto {
+export class CreateDictionaryTermDto {
   @ApiProperty({ minLength: 1, maxLength: 120 })
   @IsString()
   @MinLength(1)

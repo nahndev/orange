@@ -18,7 +18,7 @@ model Dictionary {
   updatedAt          DateTime @updatedAt
 
   languages DictionaryLanguage[]
-  entries   DictionaryEntry[]
+  terms     DictionaryTerm[]
   sentences DictionarySentence[]
 
   @@map("dictionaries")
@@ -36,7 +36,7 @@ model DictionaryLanguage {
   @@map("dictionary_languages")
 }
 
-model DictionaryEntry {
+model DictionaryTerm {
   id           String   @id @default(cuid())
   dictionaryId String
   key          String
@@ -45,11 +45,10 @@ model DictionaryEntry {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  dictionary Dictionary         @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
-  context    DictionaryContext?
+  dictionary Dictionary @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
 
   @@unique([dictionaryId, key])
-  @@map("dictionary_entries")
+  @@map("dictionary_terms")
 }
 
 model DictionarySentence {
@@ -62,20 +61,6 @@ model DictionarySentence {
   dictionary Dictionary @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
 
   @@map("dictionary_sentences")
-}
-
-model DictionaryContext {
-  id           String   @id @default(cuid())
-  entryId      String   @unique
-  description  String
-  keywords     Json     @default("[]")
-  relatedWords Json     @default("[]")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  entry DictionaryEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
-
-  @@map("dictionary_contexts")
 }
 
 model User {

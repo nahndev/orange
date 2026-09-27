@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DictionaryDetailsForm } from "@/features/dictionary/components/dictionary-details-form";
-import { DictionaryEntries } from "@/features/dictionary/components/dictionary-entries";
+import { DictionaryTerms } from "@/features/dictionary/components/dictionary-terms";
 import { DictionaryLanguagesForm } from "@/features/dictionary/components/dictionary-languages-form";
 
 interface DictionaryDetailPageProps {
@@ -40,7 +40,7 @@ export default function DictionaryDetailPage({ params }: DictionaryDetailPagePro
           <CardDescription>Manage translated keywords for this dictionary.</CardDescription>
         </CardHeader>
         <CardContent>
-          <DictionaryEntries dictionaryId={dictionaryId} />
+          <DictionaryTerms dictionaryId={dictionaryId} />
         </CardContent>
       </Card>
     </div>

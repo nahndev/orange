@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { IsObject, IsOptional, IsString, MaxLength } from "class-validator";
 
-export class UpdateDictionaryEntryDto {
+export class UpdateDictionaryTermDto {
   @ApiPropertyOptional({ maxLength: 120 })
   @IsOptional()
   @IsString()

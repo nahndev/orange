@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { MeilisearchClient } from "./meilisearch-client.service";
 import { MeilisearchIndexName } from "./meilisearch-index-name";
-import type { DictionaryEntryDocument, WordRankingInterface } from "./word-ranking.interface";
+import type { DictionaryTermDocument, WordRankingInterface } from "./word-ranking.interface";
 
 const DEFAULT_LIMIT = 5;
 
@@ -15,7 +15,7 @@ interface MeilisearchSearchResponse {
 
 @Injectable()
 export class MeilisearchWordRankingService implements WordRankingInterface {
-  private readonly indexName = new MeilisearchIndexName("dictionary_entries");
+  private readonly indexName = new MeilisearchIndexName("dictionary_terms");
 
   constructor(private readonly client: MeilisearchClient) {}
 
@@ -27,19 +27,19 @@ export class MeilisearchWordRankingService implements WordRankingInterface {
     await this.client.request(`/indexes/${this.indexName.for(dictionaryId)}`, "DELETE");
   }
 
-  async indexEntry(dictionaryId: string, entry: DictionaryEntryDocument): Promise<void> {
+  async indexTerm(dictionaryId: string, term: DictionaryTermDocument): Promise<void> {
     await this.client.request(`/indexes/${this.indexName.for(dictionaryId)}/documents`, "POST", [
       {
-        id: entry.id,
-        key: entry.key,
-        description: entry.description,
-        values: entry.values,
+        id: term.id,
+        key: term.key,
+        description: term.description,
+        values: term.values,
       },
     ]);
   }
 
-  async removeEntry(dictionaryId: string, entryId: string): Promise<void> {
-    await this.client.request(`/indexes/${this.indexName.for(dictionaryId)}/documents/${entryId}`, "DELETE");
+  async removeTerm(dictionaryId: string, termId: string): Promise<void> {
+    await this.client.request(`/indexes/${this.indexName.for(dictionaryId)}/documents/${termId}`, "DELETE");
   }
 
   async findSimilarWords(

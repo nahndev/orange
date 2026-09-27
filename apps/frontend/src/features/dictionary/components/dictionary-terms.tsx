@@ -1,22 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import type { DictionaryEntry, DictionaryEntryValues, DictionaryLanguage } from "@orange/shared-types";
+import type { DictionaryLanguage, DictionaryTerm, DictionaryTermValues } from "@orange/shared-types";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCreateDictionaryEntry, useDeleteDictionaryEntry, useDictionary, useUpdateDictionaryEntry } from "../hooks";
+import { useCreateDictionaryTerm, useDeleteDictionaryTerm, useDictionary, useUpdateDictionaryTerm } from "../hooks";
 import { LanguageName } from "./language-name";
 
-function findMissingLanguageKeys(languageKeys: string[], values: DictionaryEntryValues): string[] {
+function findMissingLanguageKeys(languageKeys: string[], values: DictionaryTermValues): string[] {
   return languageKeys.filter((languageKey) => !values[languageKey]?.trim());
 }
 
-export function DictionaryEntries({ dictionaryId }: { dictionaryId: string }) {
+export function DictionaryTerms({ dictionaryId }: { dictionaryId: string }) {
   const { data: dictionary } = useDictionary(dictionaryId);
 
   const languages = dictionary?.languages ?? [];
-  const entries = dictionary?.entries ?? [];
+  const terms = dictionary?.terms ?? [];
 
   if (languages.length === 0) {
     return <p className="text-sm text-slate-500">Configure at least one language before adding keywords.</p>;
@@ -38,38 +38,38 @@ export function DictionaryEntries({ dictionaryId }: { dictionaryId: string }) {
           </tr>
         </thead>
         <tbody>
-          {entries.length === 0 ? (
+          {terms.length === 0 ? (
             <tr>
               <td className="p-3 text-sm text-slate-500" colSpan={languages.length + 3}>
                 No keywords yet.
               </td>
             </tr>
           ) : (
-            entries.map((entry) => (
-              <DictionaryEntryRow key={entry.id} dictionaryId={dictionaryId} entry={entry} languages={languages} />
+            terms.map((term) => (
+              <DictionaryTermRow key={term.id} dictionaryId={dictionaryId} term={term} languages={languages} />
             ))
           )}
-          <NewDictionaryEntryRow dictionaryId={dictionaryId} languages={languages} />
+          <NewDictionaryTermRow dictionaryId={dictionaryId} languages={languages} />
         </tbody>
       </table>
     </div>
   );
 }
 
-function DictionaryEntryRow({
+function DictionaryTermRow({
   dictionaryId,
-  entry,
+  term,
   languages
 }: {
   dictionaryId: string;
-  entry: DictionaryEntry;
+  term: DictionaryTerm;
   languages: DictionaryLanguage[];
 }) {
-  const updateEntry = useUpdateDictionaryEntry(dictionaryId);
-  const deleteEntry = useDeleteDictionaryEntry(dictionaryId);
+  const updateTerm = useUpdateDictionaryTerm(dictionaryId);
+  const deleteTerm = useDeleteDictionaryTerm(dictionaryId);
 
-  const [description, setDescription] = useState(entry.description ?? "");
-  const [values, setValues] = useState<DictionaryEntryValues>(entry.values);
+  const [description, setDescription] = useState(term.description ?? "");
+  const [values, setValues] = useState<DictionaryTermValues>(term.values);
   const [missingKeys, setMissingKeys] = useState<string[]>([]);
 
   function handleBlur() {
@@ -80,16 +80,16 @@ function DictionaryEntryRow({
       return;
     }
 
-    if (description === (entry.description ?? "") && JSON.stringify(values) === JSON.stringify(entry.values)) {
+    if (description === (term.description ?? "") && JSON.stringify(values) === JSON.stringify(term.values)) {
       return;
     }
 
-    updateEntry.mutate({ entryId: entry.id, data: { description: description || undefined, values } });
+    updateTerm.mutate({ termId: term.id, data: { description: description || undefined, values } });
   }
 
   return (
     <tr className="border-b border-slate-100 last:border-b-0">
-      <td className="p-3 align-top font-medium text-slate-900">{entry.key}</td>
+      <td className="p-3 align-top font-medium text-slate-900">{term.key}</td>
       <td className="p-3 align-top">
         <Input
           value={description}
@@ -121,8 +121,8 @@ function DictionaryEntryRow({
           variant="ghost"
           size="icon"
           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={() => deleteEntry.mutate(entry.id)}
-          disabled={deleteEntry.isPending}
+          onClick={() => deleteTerm.mutate(term.id)}
+          disabled={deleteTerm.isPending}
           aria-label="Delete keyword"
         >
           <Trash2Icon />
@@ -132,18 +132,18 @@ function DictionaryEntryRow({
   );
 }
 
-function NewDictionaryEntryRow({
+function NewDictionaryTermRow({
   dictionaryId,
   languages
 }: {
   dictionaryId: string;
   languages: DictionaryLanguage[];
 }) {
-  const createEntry = useCreateDictionaryEntry(dictionaryId);
+  const createTerm = useCreateDictionaryTerm(dictionaryId);
 
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
-  const [values, setValues] = useState<DictionaryEntryValues>({});
+  const [values, setValues] = useState<DictionaryTermValues>({});
   const [missingKeys, setMissingKeys] = useState<string[]>([]);
 
   function handleCreate() {
@@ -154,7 +154,7 @@ function NewDictionaryEntryRow({
       return;
     }
 
-    createEntry.mutate(
+    createTerm.mutate(
       { key, description: description || undefined, values },
       {
         onSuccess: () => {
@@ -203,12 +203,12 @@ function NewDictionaryEntryRow({
           size="icon"
           className="text-primary hover:bg-primary/10 hover:text-primary"
           onClick={handleCreate}
-          disabled={createEntry.isPending}
+          disabled={createTerm.isPending}
           aria-label="Add keyword"
         >
           <PlusIcon />
         </Button>
-        {createEntry.isError ? <p className="text-sm text-red-600">Failed to add keyword.</p> : null}
+        {createTerm.isError ? <p className="text-sm text-red-600">Failed to add keyword.</p> : null}
       </td>
     </tr>
   );

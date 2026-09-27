@@ -1,18 +1,18 @@
 import { apiClient } from "@/lib/api-client";
 import type {
-  CreateDictionaryEntryRequest,
   CreateDictionaryRequest,
   CreateDictionarySentenceRequest,
+  CreateDictionaryTermRequest,
   Dictionary,
   DictionaryDetail,
-  DictionaryEntry,
   DictionarySentence,
+  DictionaryTerm,
   ListDictionarySentencesQuery,
   TranslateDictionarySentenceRequest,
   TranslateDictionarySentenceResult,
-  UpdateDictionaryEntryRequest,
   UpdateDictionaryRequest,
-  UpdateDictionarySentenceRequest
+  UpdateDictionarySentenceRequest,
+  UpdateDictionaryTermRequest
 } from "@orange/shared-types";
 
 export async function listDictionaries() {
@@ -40,18 +40,18 @@ export async function deleteDictionary(id: string) {
   return data;
 }
 
-export async function createDictionaryEntry(dictionaryId: string, payload: CreateDictionaryEntryRequest) {
-  const { data } = await apiClient.post<DictionaryEntry>(`/dictionaries/${dictionaryId}/entries`, payload);
+export async function createDictionaryTerm(dictionaryId: string, payload: CreateDictionaryTermRequest) {
+  const { data } = await apiClient.post<DictionaryTerm>(`/dictionaries/${dictionaryId}/terms`, payload);
   return data;
 }
 
-export async function updateDictionaryEntry(dictionaryId: string, entryId: string, payload: UpdateDictionaryEntryRequest) {
-  const { data } = await apiClient.patch<DictionaryEntry>(`/dictionaries/${dictionaryId}/entries/${entryId}`, payload);
+export async function updateDictionaryTerm(dictionaryId: string, termId: string, payload: UpdateDictionaryTermRequest) {
+  const { data } = await apiClient.patch<DictionaryTerm>(`/dictionaries/${dictionaryId}/terms/${termId}`, payload);
   return data;
 }
 
-export async function deleteDictionaryEntry(dictionaryId: string, entryId: string) {
-  const { data } = await apiClient.delete<{ success: boolean }>(`/dictionaries/${dictionaryId}/entries/${entryId}`);
+export async function deleteDictionaryTerm(dictionaryId: string, termId: string) {
+  const { data } = await apiClient.delete<{ success: boolean }>(`/dictionaries/${dictionaryId}/terms/${termId}`);
   return data;
 }
 

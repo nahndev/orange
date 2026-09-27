@@ -8,19 +8,17 @@ import {
 import { COUNTRIES } from "@orange/language";
 import type {
   Dictionary,
-  DictionaryContext,
   DictionaryDetail,
-  DictionaryEntry,
-  DictionaryEntryValues,
   DictionaryLanguage,
   DictionarySentence,
+  DictionaryTerm,
+  DictionaryTermValues,
 } from "@orange/shared-types";
 import {
   Prisma,
-  type DictionaryContext as DictionaryContextRecord,
-  type DictionaryEntry as DictionaryEntryRecord,
   type DictionarySentence as DictionarySentenceRecord,
   type Dictionary as DictionaryRecord,
+  type DictionaryTerm as DictionaryTermRecord,
 } from "@prisma/client";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { API_TRANSLATOR } from "../translation/api-translator.interface";
@@ -29,11 +27,11 @@ import { WORD_RANKING } from "../search/word-ranking.interface";
 import type { WordRankingInterface } from "../search/word-ranking.interface";
 import { SENTENCE_SEARCH } from "../search/sentence-search.interface";
 import type { SentenceSearchInterface, SimilarDictionarySentence } from "../search/sentence-search.interface";
-import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
+import { CreateDictionaryTermDto } from "./dto/create-dictionary-term.dto";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
 import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
 import { TranslateDictionarySentenceDto } from "./dto/translate-dictionary-sentence.dto";
-import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
+import { UpdateDictionaryTermDto } from "./dto/update-dictionary-term.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
 import { UpdateDictionarySentenceDto } from "./dto/update-dictionary-sentence.dto";
 
@@ -50,8 +48,8 @@ function escapeRegExp(value: string): string {
 type DictionaryWithLanguages = DictionaryRecord & {
   languages: { key: string; country: string }[];
 };
-type DictionaryWithLanguagesAndEntries = DictionaryWithLanguages & {
-  entries: DictionaryEntryRecord[];
+type DictionaryWithLanguagesAndTerms = DictionaryWithLanguages & {
+  terms: DictionaryTermRecord[];
   sentences: DictionarySentenceRecord[];
 };
 
@@ -132,9 +130,9 @@ export class DictionaryService {
       }
 
       if (addedLanguageKeys.length > 0 && existing.defaultLanguageKey) {
-        await this.backfillEntriesWithDefaultLanguage(
+        await this.backfillTermsWithDefaultLanguage(
           tx,
-          existing.entries,
+          existing.terms,
           addedLanguageKeys,
           existing.defaultLanguageKey,
         );
@@ -162,23 +160,23 @@ export class DictionaryService {
     return this.toDictionary(dictionary);
   }
 
-  private async backfillEntriesWithDefaultLanguage(
+  private async backfillTermsWithDefaultLanguage(
     tx: Prisma.TransactionClient,
-    entries: DictionaryEntryRecord[],
+    terms: DictionaryTermRecord[],
     addedLanguageKeys: string[],
     defaultLanguageKey: string,
   ): Promise<void> {
-    for (const entry of entries) {
-      const values = (entry.values as unknown as DictionaryEntryValues) ?? {};
+    for (const term of terms) {
+      const values = (term.values as unknown as DictionaryTermValues) ?? {};
       const defaultValue = values[defaultLanguageKey] ?? "";
 
-      const nextValues: DictionaryEntryValues = { ...values };
+      const nextValues: DictionaryTermValues = { ...values };
       for (const key of addedLanguageKeys) {
         nextValues[key] = defaultValue;
       }
 
-      await tx.dictionaryEntry.update({
-        where: { id: entry.id },
+      await tx.dictionaryTerm.update({
+        where: { id: term.id },
         data: { values: nextValues as Prisma.InputJsonValue },
       });
     }
@@ -190,14 +188,14 @@ export class DictionaryService {
     await this.safeDeleteIndexes(id);
   }
 
-  async addEntry(
+  async addTerm(
     dictionaryId: string,
-    dto: CreateDictionaryEntryDto,
-  ): Promise<DictionaryEntry> {
+    dto: CreateDictionaryTermDto,
+  ): Promise<DictionaryTerm> {
     const dictionary = await this.findOrThrow(dictionaryId);
     const values = this.assertValidValues(dictionary, dto.values);
 
-    const entry = await this.prisma.dictionaryEntry.create({
+    const term = await this.prisma.dictionaryTerm.create({
       data: {
         dictionaryId,
         key: dto.key,
@@ -206,24 +204,24 @@ export class DictionaryService {
       },
     });
 
-    await this.safeIndexEntry(dictionaryId, entry);
+    await this.safeIndexTerm(dictionaryId, term);
 
-    return this.toDictionaryEntry(entry);
+    return this.toDictionaryTerm(term);
   }
 
-  async updateEntry(
+  async updateTerm(
     dictionaryId: string,
-    entryId: string,
-    dto: UpdateDictionaryEntryDto,
-  ): Promise<DictionaryEntry> {
+    termId: string,
+    dto: UpdateDictionaryTermDto,
+  ): Promise<DictionaryTerm> {
     const dictionary = await this.findOrThrow(dictionaryId);
-    await this.findEntryOrThrow(dictionaryId, entryId);
+    await this.findTermOrThrow(dictionaryId, termId);
     const values = dto.values
       ? this.assertValidValues(dictionary, dto.values)
       : undefined;
 
-    const entry = await this.prisma.dictionaryEntry.update({
-      where: { id: entryId },
+    const term = await this.prisma.dictionaryTerm.update({
+      where: { id: termId },
       data: {
         key: dto.key,
         description: dto.description,
@@ -231,9 +229,9 @@ export class DictionaryService {
       },
     });
 
-    await this.safeIndexEntry(dictionaryId, entry);
+    await this.safeIndexTerm(dictionaryId, term);
 
-    return this.toDictionaryEntry(entry);
+    return this.toDictionaryTerm(term);
   }
 
   async addSentence(
@@ -296,56 +294,10 @@ export class DictionaryService {
       .map((record) => this.toDictionarySentence(record));
   }
 
-  async removeEntry(dictionaryId: string, entryId: string): Promise<void> {
-    await this.findEntryOrThrow(dictionaryId, entryId);
-    await this.prisma.dictionaryEntry.delete({ where: { id: entryId } });
-    await this.safeRemoveEntry(dictionaryId, entryId);
-  }
-
-  async generateContext(
-    dictionaryId: string,
-    entryId: string,
-  ): Promise<DictionaryContext> {
-    const dictionary = await this.findOrThrow(dictionaryId);
-    const entry = await this.findEntryOrThrow(dictionaryId, entryId);
-
-    const generated = await this.apiTranslator.generateContext({
-      word: entry.key,
-      description: entry.description ?? undefined,
-      languages: dictionary.languages.map((language) => ({
-        key: language.key,
-        country: language.country,
-      })),
-    });
-
-    const context = await this.prisma.dictionaryContext.upsert({
-      where: { entryId },
-      create: {
-        entryId,
-        description: generated.description,
-        keywords: generated.keywords as unknown as Prisma.InputJsonValue,
-        relatedWords: generated.relatedWords as unknown as Prisma.InputJsonValue,
-      },
-      update: {
-        description: generated.description,
-        keywords: generated.keywords as unknown as Prisma.InputJsonValue,
-        relatedWords: generated.relatedWords as unknown as Prisma.InputJsonValue,
-      },
-    });
-
-    return this.toDictionaryContext(context);
-  }
-
-  async getContext(
-    dictionaryId: string,
-    entryId: string,
-  ): Promise<DictionaryContext | null> {
-    await this.findEntryOrThrow(dictionaryId, entryId);
-    const context = await this.prisma.dictionaryContext.findUnique({
-      where: { entryId },
-    });
-
-    return context ? this.toDictionaryContext(context) : null;
+  async removeTerm(dictionaryId: string, termId: string): Promise<void> {
+    await this.findTermOrThrow(dictionaryId, termId);
+    await this.prisma.dictionaryTerm.delete({ where: { id: termId } });
+    await this.safeRemoveTerm(dictionaryId, termId);
   }
 
   async findSimilarWords(dictionaryId: string, word: string): Promise<string[]> {
@@ -359,9 +311,9 @@ export class DictionaryService {
   ): Promise<Record<string, string>> {
     const dictionary = await this.findOrThrow(dictionaryId);
 
-    const matchedEntries = dictionary.entries.filter((entry) => {
-      const values = (entry.values as unknown as DictionaryEntryValues) ?? {};
-      const candidates = [entry.key, ...Object.values(values)];
+    const matchedTerms = dictionary.terms.filter((term) => {
+      const values = (term.values as unknown as DictionaryTermValues) ?? {};
+      const candidates = [term.key, ...Object.values(values)];
       return candidates.some(
         (candidate) =>
           candidate?.trim() &&
@@ -373,13 +325,13 @@ export class DictionaryService {
     return this.apiTranslator.translate({
       text: dto.text,
       languages: dto.languages,
-      context: this.buildTranslationContext(dictionary, matchedEntries, similarSentences),
+      context: this.buildTranslationContext(dictionary, matchedTerms, similarSentences),
     });
   }
 
   private buildTranslationContext(
-    dictionary: DictionaryWithLanguagesAndEntries,
-    matchedEntries: DictionaryEntryRecord[],
+    dictionary: DictionaryWithLanguagesAndTerms,
+    matchedTerms: DictionaryTermRecord[],
     similarSentences: SimilarDictionarySentence[],
   ): string | undefined {
     const sections: string[] = [];
@@ -388,11 +340,11 @@ export class DictionaryService {
       sections.push(`Dictionary description: ${dictionary.description}`);
     }
 
-    if (matchedEntries.length > 0) {
-      const hint = matchedEntries
-        .map((entry) => {
-          const values = (entry.values as unknown as DictionaryEntryValues) ?? {};
-          return `${entry.key}: ${Object.entries(values)
+    if (matchedTerms.length > 0) {
+      const hint = matchedTerms
+        .map((term) => {
+          const values = (term.values as unknown as DictionaryTermValues) ?? {};
+          return `${term.key}: ${Object.entries(values)
             .map(([lang, value]) => `${lang}=${value}`)
             .join(", ")}`;
         })
@@ -454,30 +406,30 @@ export class DictionaryService {
     }
   }
 
-  private async safeIndexEntry(
+  private async safeIndexTerm(
     dictionaryId: string,
-    entry: DictionaryEntryRecord,
+    term: DictionaryTermRecord,
   ): Promise<void> {
     try {
-      await this.wordRanking.indexEntry(dictionaryId, {
-        id: entry.id,
-        key: entry.key,
-        description: entry.description,
-        values: (entry.values as unknown as DictionaryEntryValues) ?? {},
+      await this.wordRanking.indexTerm(dictionaryId, {
+        id: term.id,
+        key: term.key,
+        description: term.description,
+        values: (term.values as unknown as DictionaryTermValues) ?? {},
       });
     } catch (error) {
       this.logger.warn(
-        `Failed to index dictionary entry ${entry.id}: ${(error as Error).message}`,
+        `Failed to index dictionary term ${term.id}: ${(error as Error).message}`,
       );
     }
   }
 
-  private async safeRemoveEntry(dictionaryId: string, entryId: string): Promise<void> {
+  private async safeRemoveTerm(dictionaryId: string, termId: string): Promise<void> {
     try {
-      await this.wordRanking.removeEntry(dictionaryId, entryId);
+      await this.wordRanking.removeTerm(dictionaryId, termId);
     } catch (error) {
       this.logger.warn(
-        `Failed to remove dictionary entry ${entryId} from index: ${(error as Error).message}`,
+        `Failed to remove dictionary term ${termId} from index: ${(error as Error).message}`,
       );
     }
   }
@@ -489,7 +441,7 @@ export class DictionaryService {
     try {
       await this.sentenceSearch.indexSentence(dictionaryId, {
         id: sentence.id,
-        values: (sentence.values as unknown as DictionaryEntryValues) ?? {},
+        values: (sentence.values as unknown as DictionaryTermValues) ?? {},
         createdAt: sentence.createdAt.toISOString(),
       });
     } catch (error) {
@@ -501,10 +453,10 @@ export class DictionaryService {
 
   private async findOrThrow(
     id: string,
-  ): Promise<DictionaryWithLanguagesAndEntries> {
+  ): Promise<DictionaryWithLanguagesAndTerms> {
     const dictionary = await this.prisma.dictionary.findUnique({
       where: { id },
-      include: { languages: true, entries: true, sentences: true },
+      include: { languages: true, terms: true, sentences: true },
     });
 
     if (!dictionary) {
@@ -514,19 +466,19 @@ export class DictionaryService {
     return dictionary;
   }
 
-  private async findEntryOrThrow(
+  private async findTermOrThrow(
     dictionaryId: string,
-    entryId: string,
-  ): Promise<DictionaryEntryRecord> {
-    const entry = await this.prisma.dictionaryEntry.findFirst({
-      where: { id: entryId, dictionaryId },
+    termId: string,
+  ): Promise<DictionaryTermRecord> {
+    const term = await this.prisma.dictionaryTerm.findFirst({
+      where: { id: termId, dictionaryId },
     });
 
-    if (!entry) {
-      throw new NotFoundException("Dictionary entry not found");
+    if (!term) {
+      throw new NotFoundException("Dictionary term not found");
     }
 
-    return entry;
+    return term;
   }
 
   private async findSentenceOrThrow(
@@ -565,7 +517,7 @@ export class DictionaryService {
 
   private assertValidValues(
     dictionary: DictionaryWithLanguages,
-    values: DictionaryEntryValues,
+    values: DictionaryTermValues,
   ): Prisma.InputJsonValue {
     const configuredKeys = dictionary.languages.map((language) => language.key);
     const configuredKeySet = new Set(configuredKeys);
@@ -602,43 +554,32 @@ export class DictionaryService {
   }
 
   private toDictionaryDetail(
-    dictionary: DictionaryWithLanguagesAndEntries,
+    dictionary: DictionaryWithLanguagesAndTerms,
   ): DictionaryDetail {
     return {
       ...this.toDictionary(dictionary),
-      entries: dictionary.entries.map((entry) => this.toDictionaryEntry(entry)),
+      terms: dictionary.terms.map((term) => this.toDictionaryTerm(term)),
       sentences: dictionary.sentences.map((sentence) => this.toDictionarySentence(sentence)),
     };
   }
 
-  private toDictionaryEntry(entry: DictionaryEntryRecord): DictionaryEntry {
+  private toDictionaryTerm(term: DictionaryTermRecord): DictionaryTerm {
     return {
-      id: entry.id,
-      key: entry.key,
-      description: entry.description,
-      values: (entry.values as unknown as DictionaryEntryValues) ?? {},
-      createdAt: entry.createdAt.toISOString(),
-      updatedAt: entry.updatedAt.toISOString(),
+      id: term.id,
+      key: term.key,
+      description: term.description,
+      values: (term.values as unknown as DictionaryTermValues) ?? {},
+      createdAt: term.createdAt.toISOString(),
+      updatedAt: term.updatedAt.toISOString(),
     };
   }
 
   private toDictionarySentence(sentence: DictionarySentenceRecord): DictionarySentence {
     return {
       id: sentence.id,
-      values: (sentence.values as unknown as DictionaryEntryValues) ?? {},
+      values: (sentence.values as unknown as DictionaryTermValues) ?? {},
       createdAt: sentence.createdAt.toISOString(),
       updatedAt: sentence.updatedAt.toISOString(),
-    };
-  }
-
-  private toDictionaryContext(context: DictionaryContextRecord): DictionaryContext {
-    return {
-      description: context.description,
-      keywords: (context.keywords as unknown as string[]) ?? [],
-      relatedWords:
-        (context.relatedWords as unknown as DictionaryContext["relatedWords"]) ?? [],
-      createdAt: context.createdAt.toISOString(),
-      updatedAt: context.updatedAt.toISOString(),
     };
   }
 }
