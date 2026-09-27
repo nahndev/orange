@@ -86,9 +86,25 @@ export class DictionaryService {
       nextDefaultLanguageKey = null;
     }
 
+    const existingLanguageKeys = existing.languages.map(
+      (language) => language.key,
+    );
+    const addedLanguageKeys = dto.languages
+      ? nextLanguageKeys.filter((key) => !existingLanguageKeys.includes(key))
+      : [];
+
     const dictionary = await this.prisma.$transaction(async (tx) => {
       if (dto.languages) {
         await tx.dictionaryLanguage.deleteMany({ where: { dictionaryId: id } });
+      }
+
+      if (addedLanguageKeys.length > 0 && existing.defaultLanguageKey) {
+        await this.backfillEntriesWithDefaultLanguage(
+          tx,
+          existing.entries,
+          addedLanguageKeys,
+          existing.defaultLanguageKey,
+        );
       }
 
       return tx.dictionary.update({
@@ -111,6 +127,28 @@ export class DictionaryService {
     });
 
     return this.toDictionary(dictionary);
+  }
+
+  private async backfillEntriesWithDefaultLanguage(
+    tx: Prisma.TransactionClient,
+    entries: DictionaryEntryRecord[],
+    addedLanguageKeys: string[],
+    defaultLanguageKey: string,
+  ): Promise<void> {
+    for (const entry of entries) {
+      const values = (entry.values as unknown as DictionaryEntryValues) ?? {};
+      const defaultValue = values[defaultLanguageKey] ?? "";
+
+      const nextValues: DictionaryEntryValues = { ...values };
+      for (const key of addedLanguageKeys) {
+        nextValues[key] = defaultValue;
+      }
+
+      await tx.dictionaryEntry.update({
+        where: { id: entry.id },
+        data: { values: nextValues as Prisma.InputJsonValue },
+      });
+    }
   }
 
   async remove(id: string): Promise<void> {
@@ -216,22 +254,26 @@ export class DictionaryService {
 
   private assertValidValues(
     dictionary: DictionaryWithLanguages,
-    values?: DictionaryEntryValues,
+    values: DictionaryEntryValues,
   ): Prisma.InputJsonValue {
-    if (!values) {
-      return {};
-    }
+    const configuredKeys = dictionary.languages.map((language) => language.key);
+    const configuredKeySet = new Set(configuredKeys);
 
-    const configuredKeys = new Set(
-      dictionary.languages.map((language) => language.key),
-    );
     const unknownKeys = Object.keys(values).filter(
-      (key) => !configuredKeys.has(key),
+      (key) => !configuredKeySet.has(key),
     );
-
     if (unknownKeys.length > 0) {
       throw new BadRequestException(
         `Unknown language key(s): ${unknownKeys.join(", ")}`,
+      );
+    }
+
+    const missingKeys = configuredKeys.filter(
+      (key) => !values[key] || values[key].trim().length === 0,
+    );
+    if (missingKeys.length > 0) {
+      throw new BadRequestException(
+        `Missing translation value(s) for language(s): ${missingKeys.join(", ")}`,
       );
     }
 

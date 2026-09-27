@@ -7,24 +7,40 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCreateDictionaryEntry, useDeleteDictionaryEntry, useDictionary, useUpdateDictionaryEntry } from "../hooks";
 
+function findMissingLanguageKeys(languageKeys: string[], values: DictionaryEntryValues): string[] {
+  return languageKeys.filter((languageKey) => !values[languageKey]?.trim());
+}
+
 export function DictionaryEntries({ dictionaryId }: { dictionaryId: string }) {
   const { data: dictionary } = useDictionary(dictionaryId);
   const createEntry = useCreateDictionaryEntry(dictionaryId);
 
   const [newKey, setNewKey] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [newValues, setNewValues] = useState<DictionaryEntryValues>({});
+  const [missingKeys, setMissingKeys] = useState<string[]>([]);
 
   const languages = dictionary?.languages ?? [];
   const entries = dictionary?.entries ?? [];
+  const languageKeys = languages.map((language) => language.key);
 
   function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const missing = findMissingLanguageKeys(languageKeys, newValues);
+    if (missing.length > 0) {
+      setMissingKeys(missing);
+      return;
+    }
+
     createEntry.mutate(
-      { key: newKey, description: newDescription || undefined },
+      { key: newKey, description: newDescription || undefined, values: newValues },
       {
         onSuccess: () => {
           setNewKey("");
           setNewDescription("");
+          setNewValues({});
+          setMissingKeys([]);
         }
       }
     );
@@ -44,7 +60,7 @@ export function DictionaryEntries({ dictionaryId }: { dictionaryId: string }) {
             key={entry.id}
             dictionaryId={dictionaryId}
             entry={entry}
-            languageKeys={languages.map((language) => language.key)}
+            languageKeys={languageKeys}
           />
         ))
       )}
@@ -64,10 +80,31 @@ export function DictionaryEntries({ dictionaryId }: { dictionaryId: string }) {
               onChange={(event) => setNewDescription(event.target.value)}
             />
           </div>
-          <Button type="submit" disabled={createEntry.isPending}>
-            {createEntry.isPending ? "Adding..." : "Add"}
-          </Button>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          {languageKeys.map((languageKey) => {
+            const isMissing = missingKeys.includes(languageKey);
+            return (
+              <div key={languageKey} className="flex flex-col gap-1.5">
+                <Label htmlFor={`new-entry-${languageKey}`}>{languageKey}</Label>
+                <Input
+                  id={`new-entry-${languageKey}`}
+                  value={newValues[languageKey] ?? ""}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setNewValues((prev) => ({ ...prev, [languageKey]: value }));
+                    setMissingKeys((prev) => prev.filter((key) => key !== languageKey));
+                  }}
+                  className={isMissing ? "border-red-500" : undefined}
+                />
+                {isMissing ? <p className="text-sm text-red-600">Translation is required.</p> : null}
+              </div>
+            );
+          })}
+        </div>
+        <Button type="submit" disabled={createEntry.isPending} className="self-start">
+          {createEntry.isPending ? "Adding..." : "Add"}
+        </Button>
         {createEntry.isError ? <p className="text-sm text-red-600">Failed to add keyword.</p> : null}
       </form>
     </div>
@@ -88,8 +125,15 @@ function DictionaryEntryRow({
 
   const [description, setDescription] = useState(entry.description ?? "");
   const [values, setValues] = useState<DictionaryEntryValues>(entry.values);
+  const [missingKeys, setMissingKeys] = useState<string[]>([]);
 
   function handleSave() {
+    const missing = findMissingLanguageKeys(languageKeys, values);
+    if (missing.length > 0) {
+      setMissingKeys(missing);
+      return;
+    }
+
     updateEntry.mutate({ entryId: entry.id, data: { description: description || undefined, values } });
   }
 
@@ -110,16 +154,25 @@ function DictionaryEntryRow({
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {languageKeys.map((languageKey) => (
-          <div key={languageKey} className="flex flex-col gap-1.5">
-            <Label htmlFor={`entry-${entry.id}-${languageKey}`}>{languageKey}</Label>
-            <Input
-              id={`entry-${entry.id}-${languageKey}`}
-              value={values[languageKey] ?? ""}
-              onChange={(event) => setValues((prev) => ({ ...prev, [languageKey]: event.target.value }))}
-            />
-          </div>
-        ))}
+        {languageKeys.map((languageKey) => {
+          const isMissing = missingKeys.includes(languageKey);
+          return (
+            <div key={languageKey} className="flex flex-col gap-1.5">
+              <Label htmlFor={`entry-${entry.id}-${languageKey}`}>{languageKey}</Label>
+              <Input
+                id={`entry-${entry.id}-${languageKey}`}
+                value={values[languageKey] ?? ""}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setValues((prev) => ({ ...prev, [languageKey]: value }));
+                  setMissingKeys((prev) => prev.filter((key) => key !== languageKey));
+                }}
+                className={isMissing ? "border-red-500" : undefined}
+              />
+              {isMissing ? <p className="text-sm text-red-600">Translation is required.</p> : null}
+            </div>
+          );
+        })}
       </div>
       {updateEntry.isError ? <p className="text-sm text-red-600">Failed to save keyword.</p> : null}
       <Button type="button" onClick={handleSave} disabled={updateEntry.isPending} className="self-start">

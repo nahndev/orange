@@ -11,7 +11,6 @@ export class CreateDictionaryEntryDto {
   @MaxLength(500)
   description?: string;
 
-  @IsOptional()
   @IsObject()
-  values?: Record<string, string>;
+  values!: Record<string, string>;
 }

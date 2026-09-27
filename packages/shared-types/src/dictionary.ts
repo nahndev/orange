@@ -42,7 +42,7 @@ export interface UpdateDictionaryRequest {
 export interface CreateDictionaryEntryRequest {
   key: string;
   description?: string;
-  values?: DictionaryEntryValues;
+  values: DictionaryEntryValues;
 }
 
 export interface UpdateDictionaryEntryRequest {
