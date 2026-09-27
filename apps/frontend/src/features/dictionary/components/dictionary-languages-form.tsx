@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { COUNTRIES } from "@orange/language";
 import type { DictionaryLanguage } from "@orange/shared-types";
+import { Trash2Icon } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useDictionary, useUpdateDictionary } from "../hooks";
 import { LanguageSelect } from "./language-select";
@@ -64,6 +65,15 @@ export function DictionaryLanguagesForm({
         {languages.map((language, index) => (
           <div key={index} className="flex items-end gap-3">
             <div className="flex flex-1 flex-col gap-1.5">
+              <Label htmlFor={`language-country-${index}`}>Language</Label>
+              <LanguageSelect
+                id={`language-country-${index}`}
+                className="w-40"
+                value={language.country}
+                onValueChange={(country) => updateLanguage(index, { country })}
+              />
+            </div>
+            <div className="flex flex-1 flex-col gap-1.5">
               <Label htmlFor={`language-key-${index}`}>Language key</Label>
               <Input
                 id={`language-key-${index}`}
@@ -75,21 +85,15 @@ export function DictionaryLanguagesForm({
                 required
               />
             </div>
-            <div className="flex flex-1 flex-col gap-1.5">
-              <Label htmlFor={`language-country-${index}`}>Country</Label>
-              <LanguageSelect
-                id={`language-country-${index}`}
-                className="w-40"
-                value={language.country}
-                onValueChange={(country) => updateLanguage(index, { country })}
-              />
-            </div>
             <Button
               type="button"
               variant="ghost"
+              size="icon"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={() => removeLanguage(index)}
+              aria-label="Remove language"
             >
-              Remove
+              <Trash2Icon />
             </Button>
           </div>
         ))}

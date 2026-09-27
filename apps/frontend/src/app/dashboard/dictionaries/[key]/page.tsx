@@ -12,25 +12,27 @@ export default function DictionaryDetailPage({ params }: DictionaryDetailPagePro
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Details</CardTitle>
-          <CardDescription>Name and description for this dictionary.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DictionaryDetailsForm dictionaryId={dictionaryId} />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Details</CardTitle>
+            <CardDescription>Name and description for this dictionary.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DictionaryDetailsForm dictionaryId={dictionaryId} />
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Languages</CardTitle>
-          <CardDescription>Configure the languages this dictionary supports and its default language.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DictionaryLanguagesForm dictionaryId={dictionaryId} />
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Languages</CardTitle>
+            <CardDescription>Configure the languages this dictionary supports and its default language.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DictionaryLanguagesForm dictionaryId={dictionaryId} />
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
