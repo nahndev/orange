@@ -24,8 +24,16 @@ export interface Dictionary {
   updatedAt: string;
 }
 
+export interface DictionarySentence {
+  id: string;
+  values: DictionaryEntryValues;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DictionaryDetail extends Dictionary {
   entries: DictionaryEntry[];
+  sentences: DictionarySentence[];
 }
 
 export interface CreateDictionaryRequest {
@@ -49,6 +57,10 @@ export interface UpdateDictionaryEntryRequest {
   key?: string;
   description?: string;
   values?: DictionaryEntryValues;
+}
+
+export interface CreateDictionarySentenceRequest {
+  values: DictionaryEntryValues;
 }
 
 export interface DictionaryRelatedWord {

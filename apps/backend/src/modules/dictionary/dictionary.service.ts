@@ -13,11 +13,13 @@ import type {
   DictionaryEntry,
   DictionaryEntryValues,
   DictionaryLanguage,
+  DictionarySentence,
 } from "@orange/shared-types";
 import {
   Prisma,
   type DictionaryContext as DictionaryContextRecord,
   type DictionaryEntry as DictionaryEntryRecord,
+  type DictionarySentence as DictionarySentenceRecord,
   type Dictionary as DictionaryRecord,
 } from "@prisma/client";
 import { PrismaService } from "../../common/prisma/prisma.service";
@@ -27,6 +29,7 @@ import { WORD_RANKING } from "../search/word-ranking.interface";
 import type { WordRankingInterface } from "../search/word-ranking.interface";
 import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
+import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
 import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
 
@@ -39,6 +42,7 @@ type DictionaryWithLanguages = DictionaryRecord & {
 };
 type DictionaryWithLanguagesAndEntries = DictionaryWithLanguages & {
   entries: DictionaryEntryRecord[];
+  sentences: DictionarySentenceRecord[];
 };
 
 @Injectable()
@@ -218,6 +222,23 @@ export class DictionaryService {
     return this.toDictionaryEntry(entry);
   }
 
+  async addSentence(
+    dictionaryId: string,
+    dto: CreateDictionarySentenceDto,
+  ): Promise<DictionarySentence> {
+    const dictionary = await this.findOrThrow(dictionaryId);
+    const values = this.assertValidValues(dictionary, dto.values);
+
+    const sentence = await this.prisma.dictionarySentence.create({
+      data: {
+        dictionaryId,
+        values,
+      },
+    });
+
+    return this.toDictionarySentence(sentence);
+  }
+
   async removeEntry(dictionaryId: string, entryId: string): Promise<void> {
     await this.findEntryOrThrow(dictionaryId, entryId);
     await this.prisma.dictionaryEntry.delete({ where: { id: entryId } });
@@ -308,7 +329,7 @@ export class DictionaryService {
   ): Promise<DictionaryWithLanguagesAndEntries> {
     const dictionary = await this.prisma.dictionary.findUnique({
       where: { id },
-      include: { languages: true, entries: true },
+      include: { languages: true, entries: true, sentences: true },
     });
 
     if (!dictionary) {
@@ -396,6 +417,7 @@ export class DictionaryService {
     return {
       ...this.toDictionary(dictionary),
       entries: dictionary.entries.map((entry) => this.toDictionaryEntry(entry)),
+      sentences: dictionary.sentences.map((sentence) => this.toDictionarySentence(sentence)),
     };
   }
 
@@ -407,6 +429,15 @@ export class DictionaryService {
       values: (entry.values as unknown as DictionaryEntryValues) ?? {},
       createdAt: entry.createdAt.toISOString(),
       updatedAt: entry.updatedAt.toISOString(),
+    };
+  }
+
+  private toDictionarySentence(sentence: DictionarySentenceRecord): DictionarySentence {
+    return {
+      id: sentence.id,
+      values: (sentence.values as unknown as DictionaryEntryValues) ?? {},
+      createdAt: sentence.createdAt.toISOString(),
+      updatedAt: sentence.updatedAt.toISOString(),
     };
   }
 

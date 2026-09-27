@@ -19,6 +19,7 @@ model Dictionary {
 
   languages DictionaryLanguage[]
   entries   DictionaryEntry[]
+  sentences DictionarySentence[]
 
   @@map("dictionaries")
 }
@@ -49,6 +50,18 @@ model DictionaryEntry {
 
   @@unique([dictionaryId, key])
   @@map("dictionary_entries")
+}
+
+model DictionarySentence {
+  id           String   @id @default(cuid())
+  dictionaryId String
+  values       Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  dictionary Dictionary @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
+
+  @@map("dictionary_sentences")
 }
 
 model DictionaryContext {

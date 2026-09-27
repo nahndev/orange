@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useDeleteDictionary, useDictionaries } from "../hooks";
 
 export function DictionaryList() {
@@ -30,13 +30,18 @@ export function DictionaryList() {
               {dictionary.languages.length} language{dictionary.languages.length === 1 ? "" : "s"}
             </span>
           </Link>
-          <Button
-            variant="ghost"
-            onClick={() => deleteDictionary.mutate(dictionary.id)}
-            disabled={deleteDictionary.isPending}
-          >
-            Delete
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href={`/dictionaries/${dictionary.id}`} className={buttonVariants({ variant: "outline" })}>
+              Add Translation
+            </Link>
+            <Button
+              variant="ghost"
+              onClick={() => deleteDictionary.mutate(dictionary.id)}
+              disabled={deleteDictionary.isPending}
+            >
+              Delete
+            </Button>
+          </div>
         </div>
       ))}
     </div>

@@ -1,11 +1,11 @@
-import "reflect-metadata";
-import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import "reflect-metadata";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.setGlobalPrefix("rest");
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 

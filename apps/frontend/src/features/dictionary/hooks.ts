@@ -5,12 +5,15 @@ import { useSession } from "next-auth/react";
 import type {
   CreateDictionaryEntryRequest,
   CreateDictionaryRequest,
+  CreateDictionarySentenceRequest,
+  TranslateRequest,
   UpdateDictionaryEntryRequest,
   UpdateDictionaryRequest
 } from "@orange/shared-types";
 import {
   createDictionary,
   createDictionaryEntry,
+  createDictionarySentence,
   deleteDictionary,
   deleteDictionaryEntry,
   getDictionary,
@@ -18,6 +21,7 @@ import {
   updateDictionary,
   updateDictionaryEntry
 } from "@/services/dictionary-service";
+import { translateText } from "@/services/translation-service";
 import { dictionaryKeys } from "./query-keys";
 
 export function useDictionaries() {
@@ -105,5 +109,22 @@ export function useDeleteDictionaryEntry(dictionaryId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dictionaryKeys.detail(dictionaryId) });
     }
+  });
+}
+
+export function useCreateDictionarySentence(dictionaryId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateDictionarySentenceRequest) => createDictionarySentence(dictionaryId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: dictionaryKeys.detail(dictionaryId) });
+    }
+  });
+}
+
+export function useTranslateDictionarySentence() {
+  return useMutation({
+    mutationFn: (payload: TranslateRequest) => translateText(payload)
   });
 }

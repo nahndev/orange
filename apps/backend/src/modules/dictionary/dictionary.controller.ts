@@ -16,6 +16,7 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { DictionaryService } from "./dictionary.service";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
 import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
+import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
 import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
 
@@ -80,6 +81,11 @@ export class DictionaryController {
       throw new NotFoundException("Dictionary context not found");
     }
     return context;
+  }
+
+  @Post(":id/sentences")
+  addSentence(@Param("id") id: string, @Body() dto: CreateDictionarySentenceDto) {
+    return this.dictionaryService.addSentence(id, dto);
   }
 
   @Get(":id/word-ranking")

@@ -2,9 +2,11 @@ import { apiClient } from "@/lib/api-client";
 import type {
   CreateDictionaryEntryRequest,
   CreateDictionaryRequest,
+  CreateDictionarySentenceRequest,
   Dictionary,
   DictionaryDetail,
   DictionaryEntry,
+  DictionarySentence,
   UpdateDictionaryEntryRequest,
   UpdateDictionaryRequest
 } from "@orange/shared-types";
@@ -46,5 +48,10 @@ export async function updateDictionaryEntry(dictionaryId: string, entryId: strin
 
 export async function deleteDictionaryEntry(dictionaryId: string, entryId: string) {
   const { data } = await apiClient.delete<{ success: boolean }>(`/dictionaries/${dictionaryId}/entries/${entryId}`);
+  return data;
+}
+
+export async function createDictionarySentence(dictionaryId: string, payload: CreateDictionarySentenceRequest) {
+  const { data } = await apiClient.post<DictionarySentence>(`/dictionaries/${dictionaryId}/sentences`, payload);
   return data;
 }

@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { InjectPinoLogger, PinoLogger } from "nestjs-pino";
 import type {
   ApiTranslatorInterface,
   GenerateContextInput,
@@ -21,40 +22,53 @@ const RELATED_WORD_COUNT = 5;
 
 @Injectable()
 export class ApiTranslator implements ApiTranslatorInterface {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    @InjectPinoLogger(ApiTranslator.name) private readonly logger: PinoLogger,
+  ) {}
 
   async translate(input: TranslateInput): Promise<Record<string, string>> {
     const languageKeys = input.languages.map((language) => language.key);
     const prompt = [
       `Translate the following text into each of these language codes: ${languageKeys.join(", ")}.`,
-      input.context ? `Use this context to disambiguate meaning: ${input.context}` : undefined,
+      input.context
+        ? `Use this context to disambiguate meaning: ${input.context}`
+        : undefined,
       `Text: "${input.text}"`,
       `Respond with strict JSON only, mapping each language code to its translation, e.g. {"en": "...", "fr": "..."}. Do not include any other keys or commentary.`,
     ]
       .filter((line): line is string => Boolean(line))
       .join("\n");
-
+    this.logger.info(prompt);
     const raw = await this.callOllama(prompt);
     return this.parseTranslations(raw, languageKeys);
   }
 
-  async generateContext(input: GenerateContextInput): Promise<GeneratedDictionaryContext> {
+  async generateContext(
+    input: GenerateContextInput,
+  ): Promise<GeneratedDictionaryContext> {
     const prompt = [
       `You are building a glossary context entry for the word "${input.word}".`,
-      input.description ? `Existing description: ${input.description}` : undefined,
+      input.description
+        ? `Existing description: ${input.description}`
+        : undefined,
       `Respond with strict JSON only in this exact shape: {"description": string, "keywords": string[], "relatedWords": string[]}.`,
       `"description" is a short definition of the word. "keywords" is a list of short tags describing its meaning. "relatedWords" is a list of exactly ${RELATED_WORD_COUNT} words closely related to or synonymous with "${input.word}". Do not include any other keys or commentary.`,
     ]
       .filter((line): line is string => Boolean(line))
       .join("\n");
 
+    this.logger.info(prompt);
     const raw = await this.callOllama(prompt);
     const parsed = this.parseContext(raw);
 
     const relatedWords = await Promise.all(
       parsed.relatedWords.slice(0, RELATED_WORD_COUNT).map(async (word) => ({
         key: word,
-        values: await this.translate({ text: word, languages: input.languages }),
+        values: await this.translate({
+          text: word,
+          languages: input.languages,
+        }),
       })),
     );
 
@@ -66,7 +80,10 @@ export class ApiTranslator implements ApiTranslatorInterface {
   }
 
   private async callOllama(prompt: string): Promise<string> {
-    const host = this.config.get<string>("OLLAMA_HOST", "http://localhost:11434");
+    const host = this.config.get<string>(
+      "OLLAMA_HOST",
+      "http://localhost:11434",
+    );
     const model = this.config.get<string>("OLLAMA_MODEL", "qwen2.5:1.5b");
 
     const response = await fetch(`${host}/api/generate`, {
@@ -83,7 +100,10 @@ export class ApiTranslator implements ApiTranslatorInterface {
     return data.response;
   }
 
-  private parseTranslations(raw: string, languageKeys: string[]): Record<string, string> {
+  private parseTranslations(
+    raw: string,
+    languageKeys: string[],
+  ): Record<string, string> {
     const parsed = this.parseJson(raw);
     const result: Record<string, string> = {};
 
@@ -101,12 +121,17 @@ export class ApiTranslator implements ApiTranslatorInterface {
     const relatedWords = parsed.relatedWords;
 
     return {
-      description: typeof parsed.description === "string" ? parsed.description : "",
+      description:
+        typeof parsed.description === "string" ? parsed.description : "",
       keywords: Array.isArray(keywords)
-        ? keywords.filter((keyword): keyword is string => typeof keyword === "string")
+        ? keywords.filter(
+            (keyword): keyword is string => typeof keyword === "string",
+          )
         : [],
       relatedWords: Array.isArray(relatedWords)
-        ? relatedWords.filter((word): word is string => typeof word === "string")
+        ? relatedWords.filter(
+            (word): word is string => typeof word === "string",
+          )
         : [],
     };
   }
