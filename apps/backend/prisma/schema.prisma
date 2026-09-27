@@ -44,10 +44,25 @@ model DictionaryEntry {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  dictionary Dictionary @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
+  dictionary Dictionary         @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
+  context    DictionaryContext?
 
   @@unique([dictionaryId, key])
   @@map("dictionary_entries")
+}
+
+model DictionaryContext {
+  id           String   @id @default(cuid())
+  entryId      String   @unique
+  description  String
+  keywords     Json     @default("[]")
+  relatedWords Json     @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  entry DictionaryEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@map("dictionary_contexts")
 }
 
 model User {

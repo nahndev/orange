@@ -50,3 +50,16 @@ export interface UpdateDictionaryEntryRequest {
   description?: string;
   values?: DictionaryEntryValues;
 }
+
+export interface DictionaryRelatedWord {
+  key: string;
+  values: DictionaryEntryValues;
+}
+
+export interface DictionaryContext {
+  description: string;
+  keywords: string[];
+  relatedWords: DictionaryRelatedWord[];
+  createdAt: string;
+  updatedAt: string;
+}

@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { DictionaryService } from "./dictionary.service";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
@@ -51,5 +63,27 @@ export class DictionaryController {
   async removeEntry(@Param("id") id: string, @Param("entryId") entryId: string) {
     await this.dictionaryService.removeEntry(id, entryId);
     return { success: true };
+  }
+
+  @Post(":id/entries/:entryId/context")
+  generateContext(@Param("id") id: string, @Param("entryId") entryId: string) {
+    return this.dictionaryService.generateContext(id, entryId);
+  }
+
+  @Get(":id/entries/:entryId/context")
+  async getContext(@Param("id") id: string, @Param("entryId") entryId: string) {
+    const context = await this.dictionaryService.getContext(id, entryId);
+    if (!context) {
+      throw new NotFoundException("Dictionary context not found");
+    }
+    return context;
+  }
+
+  @Get(":id/word-ranking")
+  findSimilarWords(@Param("id") id: string, @Query("word") word?: string) {
+    if (!word || word.trim().length === 0) {
+      throw new BadRequestException("word query parameter is required");
+    }
+    return this.dictionaryService.findSimilarWords(id, word);
   }
 }

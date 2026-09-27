@@ -1,11 +1,14 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { COUNTRIES } from "@orange/language";
 import type {
   Dictionary,
+  DictionaryContext,
   DictionaryDetail,
   DictionaryEntry,
   DictionaryEntryValues,
@@ -13,14 +16,21 @@ import type {
 } from "@orange/shared-types";
 import {
   Prisma,
+  type DictionaryContext as DictionaryContextRecord,
   type DictionaryEntry as DictionaryEntryRecord,
   type Dictionary as DictionaryRecord,
 } from "@prisma/client";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { API_TRANSLATOR } from "../translation/api-translator.interface";
+import type { ApiTranslatorInterface } from "../translation/api-translator.interface";
+import { WORD_RANKING } from "../search/word-ranking.interface";
+import type { WordRankingInterface } from "../search/word-ranking.interface";
 import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
 import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
+
+const SIMILAR_WORD_LIMIT = 5;
 
 const COUNTRY_CODES = new Set(COUNTRIES.map((country) => country.code));
 
@@ -33,7 +43,13 @@ type DictionaryWithLanguagesAndEntries = DictionaryWithLanguages & {
 
 @Injectable()
 export class DictionaryService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(DictionaryService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(API_TRANSLATOR) private readonly apiTranslator: ApiTranslatorInterface,
+    @Inject(WORD_RANKING) private readonly wordRanking: WordRankingInterface,
+  ) {}
 
   async list(): Promise<Dictionary[]> {
     const dictionaries = await this.prisma.dictionary.findMany({
@@ -172,6 +188,8 @@ export class DictionaryService {
       },
     });
 
+    await this.safeIndexEntry(dictionaryId, entry);
+
     return this.toDictionaryEntry(entry);
   }
 
@@ -195,12 +213,94 @@ export class DictionaryService {
       },
     });
 
+    await this.safeIndexEntry(dictionaryId, entry);
+
     return this.toDictionaryEntry(entry);
   }
 
   async removeEntry(dictionaryId: string, entryId: string): Promise<void> {
     await this.findEntryOrThrow(dictionaryId, entryId);
     await this.prisma.dictionaryEntry.delete({ where: { id: entryId } });
+    await this.safeRemoveEntry(dictionaryId, entryId);
+  }
+
+  async generateContext(
+    dictionaryId: string,
+    entryId: string,
+  ): Promise<DictionaryContext> {
+    const dictionary = await this.findOrThrow(dictionaryId);
+    const entry = await this.findEntryOrThrow(dictionaryId, entryId);
+
+    const generated = await this.apiTranslator.generateContext({
+      word: entry.key,
+      description: entry.description ?? undefined,
+      languages: dictionary.languages.map((language) => ({
+        key: language.key,
+        country: language.country,
+      })),
+    });
+
+    const context = await this.prisma.dictionaryContext.upsert({
+      where: { entryId },
+      create: {
+        entryId,
+        description: generated.description,
+        keywords: generated.keywords as unknown as Prisma.InputJsonValue,
+        relatedWords: generated.relatedWords as unknown as Prisma.InputJsonValue,
+      },
+      update: {
+        description: generated.description,
+        keywords: generated.keywords as unknown as Prisma.InputJsonValue,
+        relatedWords: generated.relatedWords as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    return this.toDictionaryContext(context);
+  }
+
+  async getContext(
+    dictionaryId: string,
+    entryId: string,
+  ): Promise<DictionaryContext | null> {
+    await this.findEntryOrThrow(dictionaryId, entryId);
+    const context = await this.prisma.dictionaryContext.findUnique({
+      where: { entryId },
+    });
+
+    return context ? this.toDictionaryContext(context) : null;
+  }
+
+  async findSimilarWords(dictionaryId: string, word: string): Promise<string[]> {
+    await this.findOrThrow(dictionaryId);
+    return this.wordRanking.findSimilarWords(dictionaryId, word, SIMILAR_WORD_LIMIT);
+  }
+
+  private async safeIndexEntry(
+    dictionaryId: string,
+    entry: DictionaryEntryRecord,
+  ): Promise<void> {
+    try {
+      await this.wordRanking.indexEntry(dictionaryId, {
+        id: entry.id,
+        key: entry.key,
+        description: entry.description,
+        values: (entry.values as unknown as DictionaryEntryValues) ?? {},
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Failed to index dictionary entry ${entry.id}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  private async safeRemoveEntry(dictionaryId: string, entryId: string): Promise<void> {
+    try {
+      await this.wordRanking.removeEntry(dictionaryId, entryId);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to remove dictionary entry ${entryId} from index: ${(error as Error).message}`,
+      );
+    }
   }
 
   private async findOrThrow(
@@ -312,6 +412,17 @@ export class DictionaryService {
       values: (entry.values as unknown as DictionaryEntryValues) ?? {},
       createdAt: entry.createdAt.toISOString(),
       updatedAt: entry.updatedAt.toISOString(),
+    };
+  }
+
+  private toDictionaryContext(context: DictionaryContextRecord): DictionaryContext {
+    return {
+      description: context.description,
+      keywords: (context.keywords as unknown as string[]) ?? [],
+      relatedWords:
+        (context.relatedWords as unknown as DictionaryContext["relatedWords"]) ?? [],
+      createdAt: context.createdAt.toISOString(),
+      updatedAt: context.updatedAt.toISOString(),
     };
   }
 }

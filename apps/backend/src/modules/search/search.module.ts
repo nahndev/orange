@@ -1,8 +1,12 @@
 import { Module } from "@nestjs/common";
-import { SearchService } from "./search.service";
+import { MeilisearchWordRankingService } from "./meilisearch-word-ranking.service";
+import { WORD_RANKING } from "./word-ranking.interface";
 
 @Module({
-  providers: [SearchService],
-  exports: [SearchService]
+  providers: [
+    MeilisearchWordRankingService,
+    { provide: WORD_RANKING, useExisting: MeilisearchWordRankingService },
+  ],
+  exports: [WORD_RANKING],
 })
 export class SearchModule {}
