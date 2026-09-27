@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@orange/shared-types"],
+  transpilePackages: ["@orange/shared-types", "@orange/language"],
   async rewrites() {
     return [
       {

@@ -7,8 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Dictionary, Language, DictionaryEntry, Glossary,
-// CommitJobConfig, CommitJob will be defined here.
+// Glossary, CommitJobConfig, CommitJob will be defined here.
+
+model Dictionary {
+  id                 String   @id @default(cuid())
+  name               String
+  description        String?
+  defaultLanguageKey String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  languages DictionaryLanguage[]
+  entries   DictionaryEntry[]
+
+  @@map("dictionaries")
+}
+
+model DictionaryLanguage {
+  id           String @id @default(cuid())
+  dictionaryId String
+  key          String
+  country      String
+
+  dictionary Dictionary @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
+
+  @@unique([dictionaryId, key])
+  @@map("dictionary_languages")
+}
+
+model DictionaryEntry {
+  id           String   @id @default(cuid())
+  dictionaryId String
+  key          String
+  description  String?
+  values       Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  dictionary Dictionary @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
+
+  @@unique([dictionaryId, key])
+  @@map("dictionary_entries")
+}
 
 model User {
   id        String   @id @default(cuid())
