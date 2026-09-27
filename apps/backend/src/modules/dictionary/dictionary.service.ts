@@ -359,17 +359,12 @@ export class DictionaryService {
     const configuredKeys = dictionary.languages.map((language) => language.key);
     const configuredKeySet = new Set(configuredKeys);
 
-    const unknownKeys = Object.keys(values).filter(
-      (key) => !configuredKeySet.has(key),
+    const filteredValues = Object.fromEntries(
+      Object.entries(values).filter(([key]) => configuredKeySet.has(key)),
     );
-    if (unknownKeys.length > 0) {
-      throw new BadRequestException(
-        `Unknown language key(s): ${unknownKeys.join(", ")}`,
-      );
-    }
 
     const missingKeys = configuredKeys.filter(
-      (key) => !values[key] || values[key].trim().length === 0,
+      (key) => !filteredValues[key] || filteredValues[key].trim().length === 0,
     );
     if (missingKeys.length > 0) {
       throw new BadRequestException(
@@ -377,7 +372,7 @@ export class DictionaryService {
       );
     }
 
-    return values;
+    return filteredValues;
   }
 
   private toDictionary(dictionary: DictionaryWithLanguages): Dictionary {
