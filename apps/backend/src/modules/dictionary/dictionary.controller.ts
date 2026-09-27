@@ -11,6 +11,7 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { DictionaryService } from "./dictionary.service";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
@@ -18,6 +19,8 @@ import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
 import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
 
+@ApiTags("dictionaries")
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller("dictionaries")
 export class DictionaryController {
