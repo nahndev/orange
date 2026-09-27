@@ -19,6 +19,7 @@ import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
 import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
 import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
+import { UpdateDictionarySentenceDto } from "./dto/update-dictionary-sentence.dto";
 
 @ApiTags("dictionaries")
 @ApiBearerAuth()
@@ -86,6 +87,20 @@ export class DictionaryController {
   @Post(":id/sentences")
   addSentence(@Param("id") id: string, @Body() dto: CreateDictionarySentenceDto) {
     return this.dictionaryService.addSentence(id, dto);
+  }
+
+  @Get(":id/sentences")
+  listSentences(@Param("id") id: string, @Query("language") language?: string, @Query("q") q?: string) {
+    return this.dictionaryService.listSentences(id, { language, q });
+  }
+
+  @Patch(":id/sentences/:sentenceId")
+  updateSentence(
+    @Param("id") id: string,
+    @Param("sentenceId") sentenceId: string,
+    @Body() dto: UpdateDictionarySentenceDto,
+  ) {
+    return this.dictionaryService.updateSentence(id, sentenceId, dto);
   }
 
   @Get(":id/word-ranking")

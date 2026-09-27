@@ -27,11 +27,14 @@ import { API_TRANSLATOR } from "../translation/api-translator.interface";
 import type { ApiTranslatorInterface } from "../translation/api-translator.interface";
 import { WORD_RANKING } from "../search/word-ranking.interface";
 import type { WordRankingInterface } from "../search/word-ranking.interface";
+import { SENTENCE_SEARCH } from "../search/sentence-search.interface";
+import type { SentenceSearchInterface } from "../search/sentence-search.interface";
 import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
 import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
 import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
+import { UpdateDictionarySentenceDto } from "./dto/update-dictionary-sentence.dto";
 
 const SIMILAR_WORD_LIMIT = 5;
 
@@ -53,6 +56,7 @@ export class DictionaryService {
     private readonly prisma: PrismaService,
     @Inject(API_TRANSLATOR) private readonly apiTranslator: ApiTranslatorInterface,
     @Inject(WORD_RANKING) private readonly wordRanking: WordRankingInterface,
+    @Inject(SENTENCE_SEARCH) private readonly sentenceSearch: SentenceSearchInterface,
   ) {}
 
   async list(): Promise<Dictionary[]> {
@@ -236,7 +240,50 @@ export class DictionaryService {
       },
     });
 
+    await this.safeIndexSentence(dictionaryId, sentence);
+
     return this.toDictionarySentence(sentence);
+  }
+
+  async updateSentence(
+    dictionaryId: string,
+    sentenceId: string,
+    dto: UpdateDictionarySentenceDto,
+  ): Promise<DictionarySentence> {
+    const dictionary = await this.findOrThrow(dictionaryId);
+    await this.findSentenceOrThrow(dictionaryId, sentenceId);
+    const values = this.assertValidValues(dictionary, dto.values);
+
+    const sentence = await this.prisma.dictionarySentence.update({
+      where: { id: sentenceId },
+      data: { values },
+    });
+
+    await this.safeIndexSentence(dictionaryId, sentence);
+
+    return this.toDictionarySentence(sentence);
+  }
+
+  async listSentences(
+    dictionaryId: string,
+    query: { language?: string; q?: string },
+  ): Promise<DictionarySentence[]> {
+    await this.findOrThrow(dictionaryId);
+
+    const ids = await this.sentenceSearch.searchSentences(dictionaryId, {
+      language: query.language,
+      query: query.q,
+    });
+
+    const records = await this.prisma.dictionarySentence.findMany({
+      where: { id: { in: ids }, dictionaryId },
+    });
+    const recordsById = new Map(records.map((record) => [record.id, record]));
+
+    return ids
+      .map((id) => recordsById.get(id))
+      .filter((record): record is DictionarySentenceRecord => Boolean(record))
+      .map((record) => this.toDictionarySentence(record));
   }
 
   async removeEntry(dictionaryId: string, entryId: string): Promise<void> {
@@ -324,6 +371,23 @@ export class DictionaryService {
     }
   }
 
+  private async safeIndexSentence(
+    dictionaryId: string,
+    sentence: DictionarySentenceRecord,
+  ): Promise<void> {
+    try {
+      await this.sentenceSearch.indexSentence(dictionaryId, {
+        id: sentence.id,
+        values: (sentence.values as unknown as DictionaryEntryValues) ?? {},
+        createdAt: sentence.createdAt.toISOString(),
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Failed to index dictionary sentence ${sentence.id}: ${(error as Error).message}`,
+      );
+    }
+  }
+
   private async findOrThrow(
     id: string,
   ): Promise<DictionaryWithLanguagesAndEntries> {
@@ -352,6 +416,21 @@ export class DictionaryService {
     }
 
     return entry;
+  }
+
+  private async findSentenceOrThrow(
+    dictionaryId: string,
+    sentenceId: string,
+  ): Promise<DictionarySentenceRecord> {
+    const sentence = await this.prisma.dictionarySentence.findFirst({
+      where: { id: sentenceId, dictionaryId },
+    });
+
+    if (!sentence) {
+      throw new NotFoundException("Dictionary sentence not found");
+    }
+
+    return sentence;
   }
 
   private assertValidLanguages(languages: DictionaryLanguage[]): void {

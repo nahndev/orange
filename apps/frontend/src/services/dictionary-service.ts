@@ -7,8 +7,10 @@ import type {
   DictionaryDetail,
   DictionaryEntry,
   DictionarySentence,
+  ListDictionarySentencesQuery,
   UpdateDictionaryEntryRequest,
-  UpdateDictionaryRequest
+  UpdateDictionaryRequest,
+  UpdateDictionarySentenceRequest
 } from "@orange/shared-types";
 
 export async function listDictionaries() {
@@ -53,5 +55,24 @@ export async function deleteDictionaryEntry(dictionaryId: string, entryId: strin
 
 export async function createDictionarySentence(dictionaryId: string, payload: CreateDictionarySentenceRequest) {
   const { data } = await apiClient.post<DictionarySentence>(`/dictionaries/${dictionaryId}/sentences`, payload);
+  return data;
+}
+
+export async function listDictionarySentences(dictionaryId: string, query: ListDictionarySentencesQuery) {
+  const { data } = await apiClient.get<DictionarySentence[]>(`/dictionaries/${dictionaryId}/sentences`, {
+    params: query
+  });
+  return data;
+}
+
+export async function updateDictionarySentence(
+  dictionaryId: string,
+  sentenceId: string,
+  payload: UpdateDictionarySentenceRequest
+) {
+  const { data } = await apiClient.patch<DictionarySentence>(
+    `/dictionaries/${dictionaryId}/sentences/${sentenceId}`,
+    payload
+  );
   return data;
 }

@@ -6,9 +6,11 @@ import type {
   CreateDictionaryEntryRequest,
   CreateDictionaryRequest,
   CreateDictionarySentenceRequest,
+  ListDictionarySentencesQuery,
   TranslateRequest,
   UpdateDictionaryEntryRequest,
-  UpdateDictionaryRequest
+  UpdateDictionaryRequest,
+  UpdateDictionarySentenceRequest
 } from "@orange/shared-types";
 import {
   createDictionary,
@@ -18,8 +20,10 @@ import {
   deleteDictionaryEntry,
   getDictionary,
   listDictionaries,
+  listDictionarySentences,
   updateDictionary,
-  updateDictionaryEntry
+  updateDictionaryEntry,
+  updateDictionarySentence
 } from "@/services/dictionary-service";
 import { translateText } from "@/services/translation-service";
 import { dictionaryKeys } from "./query-keys";
@@ -117,6 +121,28 @@ export function useCreateDictionarySentence(dictionaryId: string) {
 
   return useMutation({
     mutationFn: (data: CreateDictionarySentenceRequest) => createDictionarySentence(dictionaryId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: dictionaryKeys.detail(dictionaryId) });
+    }
+  });
+}
+
+export function useDictionarySentences(dictionaryId: string, filters: ListDictionarySentencesQuery) {
+  const { status } = useSession();
+
+  return useQuery({
+    queryKey: dictionaryKeys.sentences(dictionaryId, filters),
+    queryFn: () => listDictionarySentences(dictionaryId, filters),
+    enabled: status === "authenticated" && Boolean(dictionaryId)
+  });
+}
+
+export function useUpdateDictionarySentence(dictionaryId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sentenceId, data }: { sentenceId: string; data: UpdateDictionarySentenceRequest }) =>
+      updateDictionarySentence(dictionaryId, sentenceId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dictionaryKeys.detail(dictionaryId) });
     }

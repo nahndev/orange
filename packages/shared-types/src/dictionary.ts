@@ -63,6 +63,15 @@ export interface CreateDictionarySentenceRequest {
   values: DictionaryEntryValues;
 }
 
+export interface UpdateDictionarySentenceRequest {
+  values: DictionaryEntryValues;
+}
+
+export interface ListDictionarySentencesQuery {
+  language?: string;
+  q?: string;
+}
+
 export interface DictionaryRelatedWord {
   key: string;
   values: DictionaryEntryValues;

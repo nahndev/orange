@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import type { DictionaryEntryValues } from "@orange/shared-types";
+import { useEffect, useState } from "react";
+import type { DictionaryEntryValues, DictionarySentence } from "@orange/shared-types";
 import { SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCreateDictionarySentence, useDictionary, useTranslateDictionarySentence } from "../hooks";
+import {
+  useCreateDictionarySentence,
+  useDictionary,
+  useTranslateDictionarySentence,
+  useUpdateDictionarySentence
+} from "../hooks";
 import { LanguageName } from "./language-name";
 
 function findMissingLanguageKeys(languageKeys: string[], values: DictionaryEntryValues): string[] {
@@ -37,13 +42,25 @@ function buildGlossaryContext(
   return `Use these exact translations for these terms:\n${hint}`.slice(0, 1000);
 }
 
-export function DictionarySentenceForm({ dictionaryId }: { dictionaryId: string }) {
+interface DictionarySentenceFormProps {
+  dictionaryId: string;
+  editingSentence?: DictionarySentence | null;
+  onEditComplete?: () => void;
+}
+
+export function DictionarySentenceForm({ dictionaryId, editingSentence, onEditComplete }: DictionarySentenceFormProps) {
   const { data: dictionary } = useDictionary(dictionaryId);
   const createSentence = useCreateDictionarySentence(dictionaryId);
+  const updateSentence = useUpdateDictionarySentence(dictionaryId);
   const translateSentence = useTranslateDictionarySentence();
 
   const [values, setValues] = useState<DictionaryEntryValues>({});
   const [missingKeys, setMissingKeys] = useState<string[]>([]);
+
+  useEffect(() => {
+    setValues(editingSentence?.values ?? {});
+    setMissingKeys([]);
+  }, [editingSentence]);
 
   const languages = dictionary?.languages ?? [];
   const entries = dictionary?.entries ?? [];
@@ -83,11 +100,25 @@ export function DictionarySentenceForm({ dictionaryId }: { dictionaryId: string 
     );
   }
 
-  function handleAdd() {
+  function handleSubmit() {
     const languageKeys = languages.map((language) => language.key);
     const missing = findMissingLanguageKeys(languageKeys, values);
     if (missing.length > 0) {
       setMissingKeys(missing);
+      return;
+    }
+
+    if (editingSentence) {
+      updateSentence.mutate(
+        { sentenceId: editingSentence.id, data: { values } },
+        {
+          onSuccess: () => {
+            setValues({});
+            setMissingKeys([]);
+            onEditComplete?.();
+          }
+        }
+      );
       return;
     }
 
@@ -100,6 +131,12 @@ export function DictionarySentenceForm({ dictionaryId }: { dictionaryId: string 
         }
       }
     );
+  }
+
+  function handleCancel() {
+    setValues({});
+    setMissingKeys([]);
+    onEditComplete?.();
   }
 
   return (
@@ -136,12 +173,18 @@ export function DictionarySentenceForm({ dictionaryId }: { dictionaryId: string 
         >
           <SparklesIcon /> AI
         </Button>
-        <Button type="button" onClick={handleAdd} disabled={createSentence.isPending}>
-          Add
+        <Button type="button" onClick={handleSubmit} disabled={createSentence.isPending || updateSentence.isPending}>
+          {editingSentence ? "Update" : "Add"}
         </Button>
+        {editingSentence ? (
+          <Button type="button" variant="outline" onClick={handleCancel}>
+            Cancel
+          </Button>
+        ) : null}
       </div>
       {translateSentence.isError ? <p className="text-sm text-red-600">Failed to fill translations.</p> : null}
       {createSentence.isError ? <p className="text-sm text-red-600">Failed to add sentence.</p> : null}
+      {updateSentence.isError ? <p className="text-sm text-red-600">Failed to update sentence.</p> : null}
     </div>
   );
 }
