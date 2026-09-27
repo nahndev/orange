@@ -6,10 +6,9 @@ This directory contains project-specific skills that provide Claude with domain 
 
 ### Code Quality & Patterns
 
-| Skill                                                   | Description                                                       |
-| ------------------------------------------------------- | ----------------------------------------------------------------- |
-| [testing-patterns](./testing-patterns/SKILL.md)         | Jest testing, factory functions, mocking strategies, TDD workflow |
-| [systematic-debugging](./systematic-debugging/SKILL.md) | Four-phase debugging methodology, root cause analysis             |
+| Skill                                           | Description                                                       |
+| ----------------------------------------------- | ----------------------------------------------------------------- |
+| [testing-patterns](./testing-patterns/SKILL.md) | Jest testing, factory functions, mocking strategies, TDD workflow |
 
 ### React & UI
 
@@ -17,7 +16,6 @@ This directory contains project-specific skills that provide Claude with domain 
 | ------------------------------------------------- | ------------------------------------------------------------- |
 | [react-ui-patterns](./react-ui-patterns/SKILL.md) | React patterns, loading states, error handling, GraphQL hooks |
 | [core-components](./core-components/SKILL.md)     | Design system components, tokens, component library           |
-| [formik-patterns](./formik-patterns/SKILL.md)     | Form handling, validation, submission patterns                |
 
 ### Ticket
 
