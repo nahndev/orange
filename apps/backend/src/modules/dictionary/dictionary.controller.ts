@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -87,14 +86,6 @@ export class DictionaryController {
     @Body() dto: UpdateDictionarySentenceDto,
   ) {
     return this.dictionaryService.updateSentence(id, sentenceId, dto);
-  }
-
-  @Get(":id/word-ranking")
-  findSimilarWords(@Param("id") id: string, @Query("word") word?: string) {
-    if (!word || word.trim().length === 0) {
-      throw new BadRequestException("word query parameter is required");
-    }
-    return this.dictionaryService.findSimilarWords(id, word);
   }
 
   @Post(":id/translations")

@@ -10,7 +10,6 @@ export interface WordRankingInterface {
   deleteIndex(dictionaryId: string): Promise<void>;
   indexTerm(dictionaryId: string, term: DictionaryTermDocument): Promise<void>;
   removeTerm(dictionaryId: string, termId: string): Promise<void>;
-  findSimilarWords(dictionaryId: string, word: string, limit?: number): Promise<string[]>;
 }
 
 export const WORD_RANKING = Symbol("WORD_RANKING");

@@ -36,7 +36,6 @@ import { UpdateDictionaryTermDto } from "./dto/update-dictionary-term.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
 import { UpdateDictionarySentenceDto } from "./dto/update-dictionary-sentence.dto";
 
-const SIMILAR_WORD_LIMIT = 5;
 const SIMILAR_SENTENCE_LIMIT = 5;
 const MAX_TRANSLATION_CONTEXT_LENGTH = 2000;
 
@@ -302,11 +301,6 @@ export class DictionaryService {
     await this.findTermOrThrow(dictionaryId, termId);
     await this.prisma.dictionaryTerm.delete({ where: { id: termId } });
     await this.safeRemoveTerm(dictionaryId, termId);
-  }
-
-  async findSimilarWords(dictionaryId: string, word: string): Promise<string[]> {
-    await this.findOrThrow(dictionaryId);
-    return this.wordRanking.findSimilarWords(dictionaryId, word, SIMILAR_WORD_LIMIT);
   }
 
   async translateSentence(
