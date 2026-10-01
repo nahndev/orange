@@ -19,6 +19,11 @@ export interface ChangeRequestInput {
   headBranch: string;
 }
 
+export interface BranchInput {
+  /** Name of the branch to create from the connection branch. */
+  name: string;
+}
+
 export interface CommitResult {
   sha: string;
 }
@@ -30,6 +35,7 @@ export interface ChangeRequestResult {
 
 export interface GithubProviderInterface {
   isHealthy(conn: GithubConnectable): Promise<boolean>;
+  createBranch(conn: GithubConnectable, input: BranchInput): Promise<void>;
   createCommit(conn: GithubConnectable, input: CommitInput): Promise<CommitResult>;
   createChangeRequest(conn: GithubConnectable, input: ChangeRequestInput): Promise<ChangeRequestResult>;
 }

@@ -27,6 +27,7 @@ import { WORD_RANKING } from "../search/word-ranking.interface";
 import type { WordRankingInterface } from "../search/word-ranking.interface";
 import { SENTENCE_SEARCH } from "../search/sentence-search.interface";
 import type { SentenceSearchInterface, SimilarDictionarySentence } from "../search/sentence-search.interface";
+import { DictionaryEvents } from "./dictionary-events.service";
 import { CreateDictionaryTermDto } from "./dto/create-dictionary-term.dto";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
 import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
@@ -62,6 +63,7 @@ export class DictionaryService {
     @Inject(API_TRANSLATOR) private readonly apiTranslator: ApiTranslatorInterface,
     @Inject(WORD_RANKING) private readonly wordRanking: WordRankingInterface,
     @Inject(SENTENCE_SEARCH) private readonly sentenceSearch: SentenceSearchInterface,
+    private readonly events: DictionaryEvents,
   ) {}
 
   async list(): Promise<Dictionary[]> {
@@ -249,6 +251,7 @@ export class DictionaryService {
     });
 
     await this.safeIndexSentence(dictionaryId, sentence);
+    this.events.emitSentenceChanged({ dictionaryId, sentenceId: sentence.id, change: "created" });
 
     return this.toDictionarySentence(sentence);
   }
@@ -268,6 +271,7 @@ export class DictionaryService {
     });
 
     await this.safeIndexSentence(dictionaryId, sentence);
+    this.events.emitSentenceChanged({ dictionaryId, sentenceId: sentence.id, change: "updated" });
 
     return this.toDictionarySentence(sentence);
   }

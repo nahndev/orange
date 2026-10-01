@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Octokit } from "@octokit/rest";
 import type { GithubConnectable } from "./github-connectable.interface";
 import type {
+  BranchInput,
   ChangeRequestInput,
   ChangeRequestResult,
   CommitInput,
@@ -35,6 +36,12 @@ export class GithubApiProvider implements GithubProviderInterface {
     } catch {
       return false;
     }
+  }
+
+  async createBranch(conn: GithubConnectable, input: BranchInput): Promise<void> {
+    const { octokit, owner, repo, branch } = this.requireTarget(conn);
+    const { data: base } = await octokit.git.getRef({ owner, repo, ref: `heads/${branch}` });
+    await octokit.git.createRef({ owner, repo, ref: `refs/heads/${input.name}`, sha: base.object.sha });
   }
 
   async createCommit(conn: GithubConnectable, input: CommitInput): Promise<CommitResult> {
