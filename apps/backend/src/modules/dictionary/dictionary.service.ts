@@ -16,34 +16,28 @@ import type {
 } from "@orange/shared-types";
 import {
   Prisma,
-  type DictionarySentence as DictionarySentenceRecord,
   type Dictionary as DictionaryRecord,
+  type DictionarySentence as DictionarySentenceRecord,
   type DictionaryTerm as DictionaryTermRecord,
 } from "@prisma/client";
 import { PrismaService } from "../../common/prisma/prisma.service";
-import { API_TRANSLATOR } from "../translation/api-translator.interface";
-import type { ApiTranslatorInterface } from "../translation/api-translator.interface";
-import { WORD_RANKING } from "../search/word-ranking.interface";
-import type { WordRankingInterface } from "../search/word-ranking.interface";
+import type { SentenceSearchInterface } from "../search/sentence-search.interface";
 import { SENTENCE_SEARCH } from "../search/sentence-search.interface";
-import type { SentenceSearchInterface, SimilarDictionarySentence } from "../search/sentence-search.interface";
+import type { WordRankingInterface } from "../search/word-ranking.interface";
+import { WORD_RANKING } from "../search/word-ranking.interface";
+import type { ApiTranslatorInterface } from "../translation/api-translator.interface";
+import { API_TRANSLATOR } from "../translation/api-translator.interface";
 import { DictionaryEvents } from "./dictionary-events.service";
+import { DictionaryPromptService } from "./dictionary-promt.service";
+import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
 import { CreateDictionaryTermDto } from "./dto/create-dictionary-term.dto";
 import { CreateDictionaryDto } from "./dto/create-dictionary.dto";
-import { CreateDictionarySentenceDto } from "./dto/create-dictionary-sentence.dto";
 import { TranslateDictionarySentenceDto } from "./dto/translate-dictionary-sentence.dto";
+import { UpdateDictionarySentenceDto } from "./dto/update-dictionary-sentence.dto";
 import { UpdateDictionaryTermDto } from "./dto/update-dictionary-term.dto";
 import { UpdateDictionaryDto } from "./dto/update-dictionary.dto";
-import { UpdateDictionarySentenceDto } from "./dto/update-dictionary-sentence.dto";
-
-const SIMILAR_SENTENCE_LIMIT = 5;
-const MAX_TRANSLATION_CONTEXT_LENGTH = 2000;
 
 const COUNTRY_CODES = new Set(COUNTRIES.map((country) => country.code));
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 type DictionaryWithLanguages = DictionaryRecord & {
   languages: { key: string; country: string }[];
@@ -59,10 +53,13 @@ export class DictionaryService {
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(API_TRANSLATOR) private readonly apiTranslator: ApiTranslatorInterface,
+    @Inject(API_TRANSLATOR)
+    private readonly apiTranslator: ApiTranslatorInterface,
     @Inject(WORD_RANKING) private readonly wordRanking: WordRankingInterface,
-    @Inject(SENTENCE_SEARCH) private readonly sentenceSearch: SentenceSearchInterface,
+    @Inject(SENTENCE_SEARCH)
+    private readonly sentenceSearch: SentenceSearchInterface,
     private readonly events: DictionaryEvents,
+    private readonly prompts: DictionaryPromptService,
   ) {}
 
   async list(): Promise<Dictionary[]> {
@@ -250,7 +247,11 @@ export class DictionaryService {
     });
 
     await this.safeIndexSentence(dictionaryId, sentence);
-    this.events.emitSentenceChanged({ dictionaryId, sentenceId: sentence.id, change: "created" });
+    this.events.emitSentenceChanged({
+      dictionaryId,
+      sentenceId: sentence.id,
+      change: "created",
+    });
 
     return this.toDictionarySentence(sentence);
   }
@@ -270,7 +271,11 @@ export class DictionaryService {
     });
 
     await this.safeIndexSentence(dictionaryId, sentence);
-    this.events.emitSentenceChanged({ dictionaryId, sentenceId: sentence.id, change: "updated" });
+    this.events.emitSentenceChanged({
+      dictionaryId,
+      sentenceId: sentence.id,
+      change: "updated",
+    });
 
     return this.toDictionarySentence(sentence);
   }
@@ -309,77 +314,14 @@ export class DictionaryService {
   ): Promise<Record<string, string>> {
     const dictionary = await this.findOrThrow(dictionaryId);
 
-    const matchedTerms = dictionary.terms.filter((term) => {
-      const values = (term.values as unknown as DictionaryTermValues) ?? {};
-      const candidates = [term.key, ...Object.values(values)];
-      return candidates.some(
-        (candidate) =>
-          candidate?.trim() &&
-          new RegExp(`\\b${escapeRegExp(candidate)}\\b`, "i").test(dto.text),
-      );
-    });
-    const similarSentences = await this.safeFindSimilarSentences(dictionaryId, dto.text);
+    const prompts = await this.prompts.buildTranslationPrompts(
+      dictionaryId,
+      dictionary,
+      dto.text,
+      dto.languages,
+    );
 
-    return this.apiTranslator.translate({
-      text: dto.text,
-      languages: dto.languages,
-      context: this.buildTranslationContext(dictionary, matchedTerms, similarSentences),
-    });
-  }
-
-  private buildTranslationContext(
-    dictionary: DictionaryWithLanguagesAndTerms,
-    matchedTerms: DictionaryTermRecord[],
-    similarSentences: SimilarDictionarySentence[],
-  ): string | undefined {
-    const sections: string[] = [];
-
-    if (dictionary.description) {
-      sections.push(`Dictionary description: ${dictionary.description}`);
-    }
-
-    if (matchedTerms.length > 0) {
-      const hint = matchedTerms
-        .map((term) => {
-          const values = (term.values as unknown as DictionaryTermValues) ?? {};
-          return `${term.key}: ${Object.entries(values)
-            .map(([lang, value]) => `${lang}=${value}`)
-            .join(", ")}`;
-        })
-        .join("\n");
-      sections.push(`Use these exact translations for these terms:\n${hint}`);
-    }
-
-    if (similarSentences.length > 0) {
-      const hint = similarSentences
-        .map((sentence) =>
-          Object.entries(sentence.values)
-            .map(([lang, value]) => `${lang}=${value}`)
-            .join(", "),
-        )
-        .join("\n");
-      sections.push(`Similar sentences already translated in this dictionary:\n${hint}`);
-    }
-
-    if (sections.length === 0) {
-      return undefined;
-    }
-
-    return sections.join("\n\n").slice(0, MAX_TRANSLATION_CONTEXT_LENGTH);
-  }
-
-  private async safeFindSimilarSentences(
-    dictionaryId: string,
-    text: string,
-  ): Promise<SimilarDictionarySentence[]> {
-    try {
-      return await this.sentenceSearch.findSimilarSentences(dictionaryId, text, SIMILAR_SENTENCE_LIMIT);
-    } catch (error) {
-      this.logger.warn(
-        `Failed to find similar sentences for dictionary ${dictionaryId}: ${(error as Error).message}`,
-      );
-      return [];
-    }
+    return this.apiTranslator.translate({ prompts });
   }
 
   private async safeCreateIndexes(dictionaryId: string): Promise<void> {
@@ -422,7 +364,10 @@ export class DictionaryService {
     }
   }
 
-  private async safeRemoveTerm(dictionaryId: string, termId: string): Promise<void> {
+  private async safeRemoveTerm(
+    dictionaryId: string,
+    termId: string,
+  ): Promise<void> {
     try {
       await this.wordRanking.removeTerm(dictionaryId, termId);
     } catch (error) {
@@ -557,7 +502,9 @@ export class DictionaryService {
     return {
       ...this.toDictionary(dictionary),
       terms: dictionary.terms.map((term) => this.toDictionaryTerm(term)),
-      sentences: dictionary.sentences.map((sentence) => this.toDictionarySentence(sentence)),
+      sentences: dictionary.sentences.map((sentence) =>
+        this.toDictionarySentence(sentence),
+      ),
     };
   }
 
@@ -572,7 +519,9 @@ export class DictionaryService {
     };
   }
 
-  private toDictionarySentence(sentence: DictionarySentenceRecord): DictionarySentence {
+  private toDictionarySentence(
+    sentence: DictionarySentenceRecord,
+  ): DictionarySentence {
     return {
       id: sentence.id,
       values: (sentence.values as unknown as DictionaryTermValues) ?? {},

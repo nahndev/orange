@@ -1,9 +1,12 @@
 import type { DictionaryLanguage } from "@orange/shared-types";
 
-export interface TranslateInput {
-  text: string;
+export interface TranslatePrompt {
+  prompt: string;
   languages: DictionaryLanguage[];
-  context?: string;
+}
+
+export interface TranslateInput {
+  prompts: TranslatePrompt[];
 }
 
 export interface ApiTranslatorInterface {

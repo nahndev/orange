@@ -72,5 +72,5 @@ Khi một từ mới với ngôn ngữ góc được thêm vào:
 4. AI
 
 - Ollama
-- qwen2.5:1.5b
+- qwen2.5:7b
 - Install by docker

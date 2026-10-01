@@ -1,7 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectPinoLogger, PinoLogger } from "nestjs-pino";
-import type { ApiTranslatorInterface, TranslateInput } from "./api-translator.interface";
+import type {
+  ApiTranslatorInterface,
+  TranslateInput,
+} from "./api-translator.interface";
 
 interface OllamaGenerateResponse {
   response: string;
@@ -15,20 +18,21 @@ export class ApiTranslator implements ApiTranslatorInterface {
   ) {}
 
   async translate(input: TranslateInput): Promise<Record<string, string>> {
-    const languageKeys = input.languages.map((language) => language.key);
-    const prompt = [
-      `Translate the following text into each of these language codes: ${languageKeys.join(", ")}.`,
-      input.context
-        ? `Use this context to disambiguate meaning: ${input.context}`
-        : undefined,
-      `Text: "${input.text}"`,
-      `Respond with strict JSON only, mapping each language code to its translation, e.g. {"en": "...", "fr": "..."}. Do not include any other keys or commentary.`,
-    ]
-      .filter((line): line is string => Boolean(line))
-      .join("\n");
-    this.logger.info(prompt);
-    const raw = await this.callOllama(prompt);
-    return this.parseTranslations(raw, languageKeys);
+    const results = await Promise.all(
+      input.prompts.map(async ({ prompt, languages }) => {
+        this.logger.info(prompt);
+        const raw = await this.callOllama(prompt);
+        return this.parseTranslations(
+          raw,
+          languages.map((language) => language.key),
+        );
+      }),
+    );
+
+    return results.reduce<Record<string, string>>(
+      (merged, result) => ({ ...merged, ...result }),
+      {},
+    );
   }
 
   private async callOllama(prompt: string): Promise<string> {
@@ -36,7 +40,7 @@ export class ApiTranslator implements ApiTranslatorInterface {
       "OLLAMA_HOST",
       "http://localhost:11434",
     );
-    const model = this.config.get<string>("OLLAMA_MODEL", "qwen2.5:1.5b");
+    const model = this.config.get<string>("OLLAMA_MODEL", "qwen2.5:7b");
 
     const response = await fetch(`${host}/api/generate`, {
       method: "POST",
