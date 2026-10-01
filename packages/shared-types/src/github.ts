@@ -18,3 +18,24 @@ export interface UpdateGithubConnectionRequest extends GithubConnection {
 export interface GithubHealth {
   healthy: boolean;
 }
+
+export interface GithubRepository {
+  owner: string;
+  name: string;
+  defaultBranch: string;
+}
+
+export interface GithubBranch {
+  name: string;
+}
+
+/** GitHub setup config: token, owner, repo and branch. Each endpoint uses only the fields it needs. */
+export interface GithubSetupRequest {
+  /** Omit to use the currently stored token. */
+  token?: string;
+  /** Required to list branches. */
+  owner?: string;
+  /** Required to list branches. */
+  repo?: string;
+  branch?: string;
+}

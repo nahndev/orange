@@ -8,6 +8,8 @@ import {
   checkGithubHealth,
   getGithubConnection,
   getProfile,
+  listGithubBranches,
+  listGithubRepositories,
   removeGithubConnection,
   updateGithubConnection,
   updateProfile
@@ -76,5 +78,31 @@ export function useRemoveGithubConnection() {
 export function useCheckGithubHealth() {
   return useMutation({
     mutationFn: () => checkGithubHealth()
+  });
+}
+
+interface GithubListOptions {
+  /** Token typed by the user; undefined falls back to the stored token. */
+  token?: string;
+  /** Bumped each time the user submits a token, so lists reload. */
+  revision: number;
+  enabled: boolean;
+}
+
+export function useGithubRepositories({ token, revision, enabled }: GithubListOptions) {
+  return useQuery({
+    queryKey: accountKeys.githubRepositories(revision),
+    queryFn: () => listGithubRepositories({ token }),
+    enabled,
+    retry: false
+  });
+}
+
+export function useGithubBranches({ owner, repo, ...options }: GithubListOptions & { owner: string; repo: string }) {
+  return useQuery({
+    queryKey: accountKeys.githubBranches(owner, repo, options.revision),
+    queryFn: () => listGithubBranches({ token: options.token, owner, repo }),
+    enabled: options.enabled && Boolean(owner) && Boolean(repo),
+    retry: false
   });
 }

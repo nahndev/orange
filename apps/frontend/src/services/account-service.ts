@@ -2,8 +2,11 @@ import { apiClient } from "@/lib/api-client";
 import type {
   AuthUser,
   ChangePasswordRequest,
+  GithubBranch,
   GithubConnectionStatus,
   GithubHealth,
+  GithubRepository,
+  GithubSetupRequest,
   UpdateGithubConnectionRequest,
   UpdateProfileRequest
 } from "@orange/shared-types";
@@ -40,5 +43,15 @@ export async function removeGithubConnection() {
 
 export async function checkGithubHealth() {
   const { data } = await apiClient.get<GithubHealth>("/account/github/health");
+  return data;
+}
+
+export async function listGithubRepositories(payload: GithubSetupRequest) {
+  const { data } = await apiClient.post<GithubRepository[]>("/account/github/repositories", payload);
+  return data;
+}
+
+export async function listGithubBranches(payload: GithubSetupRequest) {
+  const { data } = await apiClient.post<GithubBranch[]>("/account/github/branches", payload);
   return data;
 }
