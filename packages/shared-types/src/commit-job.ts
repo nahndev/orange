@@ -4,6 +4,8 @@ export type CommitJobStatus = "RUNNING" | "SUCCEEDED" | "FAILED";
 
 export interface CommitJobConfig {
   id: string;
+  /** GithubProfile the job pushes to. */
+  connectorId: string;
   dictionaryId: string;
   name: string;
   trigger: CommitJobTrigger;
@@ -15,6 +17,7 @@ export interface CommitJobConfig {
 }
 
 export interface CreateCommitJobConfigRequest {
+  connectorId: string;
   dictionaryId: string;
   name: string;
   trigger?: CommitJobTrigger;
@@ -23,6 +26,7 @@ export interface CreateCommitJobConfigRequest {
 }
 
 export interface UpdateCommitJobConfigRequest {
+  connectorId?: string;
   name?: string;
   trigger?: CommitJobTrigger;
   filePathTemplate?: string;

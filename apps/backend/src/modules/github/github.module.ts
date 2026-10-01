@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
-import { GithubConnectionController } from "./github-connection.controller";
-import { GithubConnectionService } from "./github-connection.service";
+import { GithubProfileController } from "./github-profile.controller";
+import { GithubProfileService } from "./github-profile.service";
+import { GithubProfileSetupController } from "./github-profile-setup.controller";
+import { GithubProfileSetupService } from "./github-profile-setup.service";
 import { GithubApiProvider } from "./github-api-provider.service";
 import { GithubApiSetupProvider } from "./github-api-setup-provider.service";
 import { GITHUB_PROVIDER } from "./github-provider.interface";
@@ -8,9 +10,10 @@ import { GITHUB_SETUP_PROVIDER } from "./github-setup-provider.interface";
 import { GithubTokenCipher } from "./github-token-cipher.service";
 
 @Module({
-  controllers: [GithubConnectionController],
+  controllers: [GithubProfileController, GithubProfileSetupController],
   providers: [
-    GithubConnectionService,
+    GithubProfileService,
+    GithubProfileSetupService,
     GithubTokenCipher,
     GithubApiProvider,
     GithubApiSetupProvider,

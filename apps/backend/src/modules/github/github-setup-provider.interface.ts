@@ -9,6 +9,8 @@ export interface GithubSetupProviderInterface {
   /** Repositories the token can push to. */
   listRepositories(token: string): Promise<RepositorySummary[]>;
   listBranches(token: string, owner: string, repo: string): Promise<string[]>;
+  /** Whether the token can read the branch of the repository. */
+  isHealthy(token: string, owner: string, repo: string, branch: string): Promise<boolean>;
 }
 
 export const GITHUB_SETUP_PROVIDER = Symbol("GITHUB_SETUP_PROVIDER");

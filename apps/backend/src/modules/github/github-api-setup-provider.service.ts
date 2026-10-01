@@ -25,4 +25,13 @@ export class GithubApiSetupProvider implements GithubSetupProviderInterface {
 
     return branches.map((branch) => branch.name);
   }
+
+  async isHealthy(token: string, owner: string, repo: string, branch: string): Promise<boolean> {
+    try {
+      await new Octokit({ auth: token }).repos.getBranch({ owner, repo, branch });
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }

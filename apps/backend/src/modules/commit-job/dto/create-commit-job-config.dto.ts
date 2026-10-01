@@ -7,6 +7,11 @@ export const COMMIT_JOB_TRIGGERS = ["SENTENCE_CHANGED"] as const;
 export const FILE_PATH_TEMPLATE_PATTERN = /^(?!\/)(?!.*\.\.)(?=.*\{language\}).+$/;
 
 export class CreateCommitJobConfigDto {
+  @ApiProperty({ description: "GithubProfile the job pushes to" })
+  @IsString()
+  @MinLength(1)
+  connectorId!: string;
+
   @ApiProperty()
   @IsString()
   @MinLength(1)

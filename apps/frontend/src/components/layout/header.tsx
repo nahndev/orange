@@ -10,6 +10,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { href: "/dashboard/dictionaries", label: "Dictionaries" },
   { href: "/dashboard/commit-jobs", label: "Jobs" },
+  { href: "/dashboard/token", label: "Token" },
 ];
 
 export function DashboardHeader({ userName }: { userName: string }) {

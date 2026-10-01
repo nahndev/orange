@@ -1,7 +1,13 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+import { IsNotEmpty, IsString, MaxLength } from "class-validator";
 
-export class UpdateGithubConnectionDto {
+export class CreateGithubProfileDto {
+  @ApiProperty({ maxLength: 120 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  name!: string;
+
   @ApiProperty({ maxLength: 100 })
   @IsString()
   @IsNotEmpty()
@@ -20,10 +26,9 @@ export class UpdateGithubConnectionDto {
   @MaxLength(255)
   branch!: string;
 
-  @ApiPropertyOptional({ description: "Omit to keep the stored token." })
-  @IsOptional()
+  @ApiProperty({ maxLength: 255 })
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
-  token?: string;
+  token!: string;
 }

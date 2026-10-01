@@ -1,11 +1,11 @@
 import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import type { DictionaryTermValues } from "@orange/shared-types";
-import type { CommitJobConfig, User } from "@prisma/client";
+import type { CommitJobConfig, GithubProfile } from "@prisma/client";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { DictionaryEvents, type DictionarySentenceChangedEvent } from "../dictionary/dictionary-events.service";
 import { GITHUB_PROVIDER, type CommitFile, type GithubProviderInterface } from "../github/github-provider.interface";
 
-type CommitJobConfigWithUser = CommitJobConfig & { user: User };
+type CommitJobConfigWithConnector = CommitJobConfig & { connector: GithubProfile };
 
 const LANGUAGE_PLACEHOLDER = "{language}";
 
@@ -28,7 +28,7 @@ export class CommitJobRunner implements OnModuleInit {
     try {
       const configs = await this.prisma.commitJobConfig.findMany({
         where: { dictionaryId: event.dictionaryId, trigger: "SENTENCE_CHANGED", enabled: true },
-        include: { user: true }
+        include: { connector: true }
       });
 
       await Promise.all(configs.map((config) => this.runConfig(config, event)));
@@ -39,7 +39,7 @@ export class CommitJobRunner implements OnModuleInit {
     }
   }
 
-  private async runConfig(config: CommitJobConfigWithUser, event: DictionarySentenceChangedEvent): Promise<void> {
+  private async runConfig(config: CommitJobConfigWithConnector, event: DictionarySentenceChangedEvent): Promise<void> {
     const job = await this.prisma.commitJob.create({ data: { configId: config.id } });
 
     try {
@@ -55,9 +55,9 @@ export class CommitJobRunner implements OnModuleInit {
       const branch = `orange/commit-job-${job.id}`;
       const title = `chore(i18n): update ${dictionary.name} translations`;
 
-      await this.githubProvider.createBranch(config.user, { name: branch });
-      const commit = await this.githubProvider.createCommit(config.user, { message: title, files, branch });
-      const changeRequest = await this.githubProvider.createChangeRequest(config.user, {
+      await this.githubProvider.createBranch(config.connector, { name: branch });
+      const commit = await this.githubProvider.createCommit(config.connector, { message: title, files, branch });
+      const changeRequest = await this.githubProvider.createChangeRequest(config.connector, {
         title,
         body: `Commit job "${config.name}": sentence ${event.sentenceId} was ${event.change}.`,
         headBranch: branch

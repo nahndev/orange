@@ -1,18 +1,20 @@
-export interface GithubConnection {
+/** A saved GitHub target (repository + branch + token) shared by the whole application. The token is never exposed. */
+export interface GithubProfile {
+  id: string;
+  name: string;
   owner: string;
   repo: string;
   branch: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface GithubConnectionStatus {
-  connected: boolean;
-  connection: GithubConnection | null;
-  hasToken: boolean;
-}
-
-export interface UpdateGithubConnectionRequest extends GithubConnection {
-  /** Omit to keep the currently stored token. */
-  token?: string;
+export interface CreateGithubProfileRequest {
+  name: string;
+  owner: string;
+  repo: string;
+  branch: string;
+  token: string;
 }
 
 export interface GithubHealth {
@@ -31,8 +33,7 @@ export interface GithubBranch {
 
 /** GitHub setup config: token, owner, repo and branch. Each endpoint uses only the fields it needs. */
 export interface GithubSetupRequest {
-  /** Omit to use the currently stored token. */
-  token?: string;
+  token: string;
   /** Required to list branches. */
   owner?: string;
   /** Required to list branches. */

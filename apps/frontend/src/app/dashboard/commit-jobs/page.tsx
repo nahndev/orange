@@ -10,7 +10,7 @@ export default function CommitJobsPage() {
           <CardTitle>New commit job</CardTitle>
           <CardDescription>
             When a sentence of the dictionary changes, a merge request with the updated language files is created in
-            your connected GitHub repository.
+            the repository of the selected GitHub profile.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -21,7 +21,7 @@ export default function CommitJobsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Jobs</CardTitle>
-          <CardDescription>Enable, disable or review the runs of your commit jobs.</CardDescription>
+          <CardDescription>Enable, disable or review the runs of the commit jobs.</CardDescription>
         </CardHeader>
         <CardContent>
           <CommitJobList />
