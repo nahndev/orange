@@ -3,7 +3,7 @@
 WEB_URL ?= http://localhost:3000
 API_DOCS_URL ?= http://localhost:3001/docs
 
-.PHONY: help open-web prisma-sync open-api-docs
+.PHONY: help open-web prisma-sync prisma-erd open-api-docs
 
 help: ## List available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -14,6 +14,9 @@ open-web: ## Open the frontend website in the default browser
 prisma-sync: ## Run prisma migrate dev, then prisma generate
 	pnpm --filter @orange/backend prisma:migrate
 	pnpm --filter @orange/backend prisma:generate
+
+prisma-erd: ## Generate the database ERD diagram to docs/erd.svg
+	pnpm --filter @orange/backend prisma:erd
 
 open-api-docs: ## Open the backend REST API docs (Swagger) in the default browser
 	xdg-open $(API_DOCS_URL)
