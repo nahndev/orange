@@ -14,6 +14,10 @@
 - **Commit format**: Conventional Commits (`feat:`, `fix:`, `docs:`, etc.)
 - **PR titles**: Same as commit format
 
+## Database
+
+- Prisma using models in `apps/backend/prisma/schema.prisma`
+
 ## Critical Rules - Must apply
 
 - Avoid run project
