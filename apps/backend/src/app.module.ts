@@ -6,6 +6,7 @@ import { PrismaModule } from "./common/prisma/prisma.module";
 import { AccountModule } from "./modules/account/account.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { CommitJobModule } from "./modules/commit-job/commit-job.module";
+import { GithubModule } from "./modules/github/github.module";
 import { DictionaryModule } from "./modules/dictionary/dictionary.module";
 import { SearchModule } from "./modules/search/search.module";
 import { TranslationModule } from "./modules/translation/translation.module";

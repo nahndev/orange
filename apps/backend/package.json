@@ -25,6 +25,7 @@
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/swagger": "^7.4.0",
+    "@octokit/rest": "^20.1.2",
     "@orange/language": "workspace:*",
     "@orange/shared-types": "workspace:*",
     "@prisma/client": "^5.15.0",
